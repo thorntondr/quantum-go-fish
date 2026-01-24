@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Quantum Go Fish (Paperclip UI)</title>
+<style>
+  body { font-family: sans-serif; }
+  table { border-collapse: collapse; margin-top: 1em; }
+  th, td { border: 1px solid #999; padding: 6px 10px; text-align: center; }
+  .clip { font-weight: bold; }
+  .zero { text-decoration: line-through; color: #888; }
+  .controls { margin-top: 1em; }
+  select, button { margin-right: 0.5em; }
+</style>
+</head>
+<body>
+
+<h2>Quantum Go Fish — Paperclip UI</h2>
+
+<div id="status"></div>
+
+<table id="stateTable"></table>
+
+<div class="controls">
+  <label>Ask player:
+    <select id="askPlayer"></select>
+  </label>
+  <label>for suit:
+    <select id="askSuit"></select>
+  </label>
+  <button onclick="ask()">Ask</button>
+</div>
+
+<div class="controls" id="answerControls" style="display:none;">
+  <button onclick="answer(true)">Answer YES</button>
+  <button onclick="answer(false)">Answer NO</button>
+</div>
+
+<script>
+/*** CONFIG ***/
+const players = ["A", "B", "C"];
+const suits   = ["♠", "♥", "♦"];
+const TOTAL = {};
+suits.forEach(s => TOTAL[s] = players.length);
+
+/*** STATE ***/
+let min = {}, max = {}, cards = {};
+let currentPlayer = 0;
+let pendingAsk = null;
+
+/*** INIT ***/
+players.forEach(p => {
+  min[p] = {}; max[p] = {};
+  suits.forEach(s => { min[p][s] = 0; max[p][s] = 4; });
+  cards[p] = 4;
+});
+
+render();
+
+/*** CORE LOGIC ***/
+function propagate() {
+  let changed;
+  do {
+    changed = false;
+
+    // per-player constraints
+    for (const p of players) {
+      for (const s of suits) {
+        let minOthers = suits.reduce((a,t)=>t!==s?a+min[p][t]:a,0);
+        let maxOthers = suits.reduce((a,t)=>t!==s?a+max[p][t]:a,0);
+
+        let newMax = Math.min(max[p][s], cards[p] - minOthers);
+        let newMin = Math.max(min[p][s], cards[p] - maxOthers);
+
+        if (newMax !== max[p][s]) { max[p][s] = newMax; changed = true; }
+        if (newMin !== min[p][s]) { min[p][s] = newMin; changed = true; }
+      }
+    }
+
+    // per-suit constraints
+    for (const s of suits) {
+      for (const p of players) {
+        let minOthers = players.reduce((a,q)=>q!==p?a+min[q][s]:a,0);
+        let maxOthers = players.reduce((a,q)=>q!==p?a+max[q][s]:a,0);
+
+        let newMax = Math.min(max[p][s], TOTAL[s] - minOthers);
+        let newMin = Math.max(min[p][s], TOTAL[s] - maxOthers);
+
+        if (newMax !== max[p][s]) { max[p][s] = newMax; changed = true; }
+        if (newMin !== min[p][s]) { min[p][s] = newMin; changed = true; }
+      }
+    }
+  } while (changed);
+}
+
+/*** ACTIONS ***/
+function ask() {
+  const P = players[currentPlayer];
+  const Q = document.getElementById("askPlayer").value;
+  const S = document.getElementById("askSuit").value;
+
+  if (max[P][S] <= 0) {
+    alert("Illegal ask.");
+    return;
+  }
+
+  min[P][S] = Math.max(min[P][S], 1);
+  propagate();
+
+  pendingAsk = { P, Q, S };
+  document.getElementById("answerControls").style.display = "block";
+  render();
+}
+
+function answer(yes) {
+  const { P, Q, S } = pendingAsk;
+
+  if (yes) {
+    if (max[Q][S] <= 0) { alert("Illegal YES."); return; }
+    min[P][S]++; max[P][S]++;
+    min[Q][S]--; max[Q][S]--;
+    cards[P]++; cards[Q]--;
+  } else {
+    if (min[Q][S] !== 0) { alert("Illegal NO."); return; }
+    max[Q][S] = 0;
+  }
+
+  propagate();
+  pendingAsk = null;
+  document.getElementById("answerControls").style.display = "none";
+  currentPlayer = (currentPlayer + 1) % players.length;
+  render();
+}
+
+/*** UI ***/
+function render() {
+  const table = document.getElementById("stateTable");
+  table.innerHTML = "";
+
+  let header = "<tr><th></th>";
+  suits.forEach(s => header += `<th>${s}</th>`);
+  header += "<th>Cards</th></tr>";
+  table.innerHTML += header;
+
+  players.forEach(p => {
+    let row = `<tr><th>${p}</th>`;
+    suits.forEach(s => {
+      if (max[p][s] === 0) {
+        row += `<td class="zero">X</td>`;
+      } else {
+        row += `<td><span class="clip">${"📎".repeat(min[p][s])}</span></td>`;
+      }
+    });
+    row += `<td>${cards[p]}</td></tr>`;
+    table.innerHTML += row;
+  });
+
+  document.getElementById("status").innerText =
+    `Turn: Player ${players[currentPlayer]}`;
+
+  // update controls
+  const askPlayer = document.getElementById("askPlayer");
+  const askSuit = document.getElementById("askSuit");
+
+  askPlayer.innerHTML = players
+    .filter(p => p !== players[currentPlayer])
+    .map(p => `<option>${p}</option>`).join("");
+
+  askSuit.innerHTML = suits
+    .filter(s => max[players[currentPlayer]][s] > 0)
+    .map(s => `<option>${s}</option>`).join("");
+}
+</script>
+
+</body>
+</html>
