@@ -41,7 +41,7 @@
 const players = ["A", "B", "C"];
 const suits   = ["♠", "♥", "♦"];
 const TOTAL = {};
-suits.forEach(s => TOTAL[s] = players.length);
+suits.forEach(s => TOTAL[s] = 4);
 
 /*** STATE ***/
 let min = {}, max = {}, cards = {};
@@ -117,6 +117,7 @@ function answer(yes) {
 
   if (yes) {
     if (max[Q][S] <= 0) { alert("Illegal YES."); return; }
+    min[Q][S] = Math.max(min[Q][S], 1);
     min[P][S]++; max[P][S]++;
     min[Q][S]--; max[Q][S]--;
     cards[P]++; cards[Q]--;
