@@ -140,7 +140,7 @@ function render() {
 
   let header = "<tr><th></th>";
   suits.forEach(s => header += `<th>${s}</th>`);
-  header += "<th>Cards</th></tr>";
+  header += "<th>?</th></tr>";
   table.innerHTML += header;
 
   players.forEach(p => {
@@ -149,10 +149,10 @@ function render() {
       if (max[p][s] === 0) {
         row += `<td class="zero">X</td>`;
       } else {
-        row += `<td><span class="clip">${"📎".repeat(min[p][s])}</span></td>`;
+        row += `<td><span>${min[p][s]>0?min[p][s]:""}</span></td>`;
       }
     });
-    row += `<td>${cards[p]}</td></tr>`;
+    row += `<td>${cards[p]-min[p]["♠"]-min[p]["♥"]-min[p]["♦"]}</td></tr>`;
     table.innerHTML += row;
   });
 
