@@ -5,6 +5,10 @@ cards = [0]*N
 min_cards = [[0]*N]*N
 max_cards = [[SUIT_SIZE]*N]*N
 
+def propagate():
+    # TODO
+    return
+
 def ask(P,Q,S):
     assert(max_cards[P][S] > 0)
     min_cards[P][S] = max(1, min_cards[P][S])
