@@ -53,10 +53,10 @@ export function isLegalMove(state: GameState, move: Move): LegalResult {
 
   if (move.kind === "AnswerNo") {
     if (state.min[move.target][move.suit] !== 0) {
-      return { ok: false, reason: "AnswerNo illegal: target must be guaranteed zero cards in suit." };
+      return { ok: false, reason: "AnswerNo illegal: target must not be guaranteed cards in suit." };
     }
     return { ok: true };
   }
 
-  return { ok: false, reason: "Unsupported move kind." };
+  return { ok: false, reason: "Unsupported move." };
 }
