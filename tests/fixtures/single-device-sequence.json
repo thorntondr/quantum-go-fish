@@ -1,0 +1,6 @@
+[
+  { "kind": "Ask", "asker": "A", "target": "B", "suit": "S" },
+  { "kind": "AnswerNo", "target": "B", "suit": "S" },
+  { "kind": "Ask", "asker": "B", "target": "C", "suit": "H" },
+  { "kind": "AnswerYes", "target": "C", "suit": "H" }
+]
