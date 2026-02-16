@@ -3,11 +3,54 @@ import { propagate } from "./propagate.js";
 import { isLegalMove } from "./rules.js";
 import { cloneState } from "./state.js";
 import type { GameState, Move } from "./types.js";
+import type { WinReason } from "./types.js";
 
 function nextPlayer(state: GameState, current: string): string {
   const idx = state.players.indexOf(current);
   const next = (idx + 1) % state.players.length;
   return state.players[next];
+}
+
+function turnOrderFrom(state: GameState, startPlayer: string): string[] {
+  const startIndex = state.players.indexOf(startPlayer);
+  if (startIndex === -1) {
+    return [...state.players];
+  }
+  return [...state.players.slice(startIndex), ...state.players.slice(0, startIndex)];
+}
+
+function detectGuaranteedSetWinner(state: GameState, startPlayer: string): string | undefined {
+  const ordered = turnOrderFrom(state, startPlayer);
+  for (const player of ordered) {
+    const hasFourOfSuit = state.suits.some((suit) => state.min[player][suit] >= 4);
+    if (hasFourOfSuit) {
+      return player;
+    }
+  }
+  return undefined;
+}
+
+function detectWin(state: GameState, startPlayer: string): { winner: string; reason: WinReason } | undefined {
+  const guaranteedWinner = detectGuaranteedSetWinner(state, startPlayer);
+  if (guaranteedWinner) {
+    return { winner: guaranteedWinner, reason: "GuaranteedFourOfSuit" };
+  }
+
+  const allCardsKnown = state.players.every((player) =>
+    state.suits.every((suit) => state.min[player][suit] === state.max[player][suit])
+  );
+  if (allCardsKnown) {
+    return { winner: startPlayer, reason: "AllCardsKnown" };
+  }
+  return undefined;
+}
+
+function finalizeAsGameOver(state: GameState, winner: string, reason: WinReason): void {
+  state.turnState.pendingAsk = undefined;
+  state.turnState.currentPlayer = winner;
+  state.turnState.phase = "GameOver";
+  state.turnState.winner = winner;
+  state.turnState.winReason = reason;
 }
 
 export function applyMove(input: GameState, move: Move): GameState {
@@ -31,8 +74,15 @@ export function applyMove(input: GameState, move: Move): GameState {
     state.turnState.phase = "Propagating";
 
     const propagated = propagate(state);
-    propagated.turnState.phase = "AwaitingAnswer";
-    propagated.turnState.currentPlayer = move.asker;
+    const askWin = detectWin(propagated, move.asker);
+    if (askWin) {
+      finalizeAsGameOver(propagated, askWin.winner, askWin.reason);
+    } else {
+      propagated.turnState.phase = "AwaitingAnswer";
+      propagated.turnState.currentPlayer = move.asker;
+      propagated.turnState.winner = undefined;
+      propagated.turnState.winReason = undefined;
+    }
 
     assertInvariants(propagated);
     return propagated;
@@ -67,9 +117,16 @@ export function applyMove(input: GameState, move: Move): GameState {
   state.turnState.phase = "Propagating";
 
   const propagated = propagate(state);
-  propagated.turnState.phase = "NextTurn";
-  propagated.turnState.currentPlayer = nextPlayer(propagated, asker);
-  propagated.turnState.phase = "Idle";
+  const answerWin = detectWin(propagated, asker);
+  if (answerWin) {
+    finalizeAsGameOver(propagated, answerWin.winner, answerWin.reason);
+  } else {
+    propagated.turnState.phase = "NextTurn";
+    propagated.turnState.currentPlayer = nextPlayer(propagated, asker);
+    propagated.turnState.phase = "Idle";
+    propagated.turnState.winner = undefined;
+    propagated.turnState.winReason = undefined;
+  }
 
   assertInvariants(propagated);
   return propagated;

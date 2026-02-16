@@ -7,8 +7,23 @@ export interface UiBindings {
   statusRoot: HTMLElement;
 }
 
+function formatWinReason(reason?: string): string {
+  if (reason === "GuaranteedFourOfSuit") {
+    return "guaranteed four-of-a-suit";
+  }
+  if (reason === "AllCardsKnown") {
+    return "all card suits known";
+  }
+  return "unknown";
+}
+
 export function renderState(bindings: UiBindings, state: GameState): void {
   bindings.stateRoot.innerHTML = renderPaperclipTable(state);
+  if (state.turnState.phase === "GameOver" && state.turnState.winner) {
+    bindings.statusRoot.textContent =
+      `Game Over. Winner: ${state.turnState.winner} (${formatWinReason(state.turnState.winReason)})`;
+    return;
+  }
   bindings.statusRoot.textContent = `Turn: ${state.turnState.currentPlayer} (${state.turnState.phase})`;
 }
 

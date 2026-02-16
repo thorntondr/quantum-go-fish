@@ -68,7 +68,9 @@ export function cloneState(state: GameState): GameState {
     turnState: {
       phase: state.turnState.phase,
       currentPlayer: state.turnState.currentPlayer,
-      pendingAsk: state.turnState.pendingAsk ? { ...state.turnState.pendingAsk } : undefined
+      pendingAsk: state.turnState.pendingAsk ? { ...state.turnState.pendingAsk } : undefined,
+      winner: state.turnState.winner,
+      winReason: state.turnState.winReason
     },
     version: state.version
   };

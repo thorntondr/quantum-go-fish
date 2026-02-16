@@ -33,6 +33,16 @@ function parseMove(input: string): Move {
   return JSON.parse(input) as Move;
 }
 
+function formatWinReason(reason?: string): string {
+  if (reason === "GuaranteedFourOfSuit") {
+    return "guaranteed four-of-a-suit";
+  }
+  if (reason === "AllCardsKnown") {
+    return "all card suits known";
+  }
+  return "unknown";
+}
+
 function formatStateTable(state: GameState): string {
   const cols = ["Player", ...state.suits, "Hand", "Turn"];
   const rows: string[][] = [];
@@ -69,6 +79,11 @@ function formatStateTable(state: GameState): string {
     );
   } else {
     lines.push("", `Phase: ${state.turnState.phase}`);
+  }
+  if (state.turnState.phase === "GameOver" && state.turnState.winner) {
+    lines.push(
+      `Winner: ${state.turnState.winner} (${formatWinReason(state.turnState.winReason)})`
+    );
   }
   lines.push(`State Hash: ${stateHash(state)}`);
   return lines.join("\n");

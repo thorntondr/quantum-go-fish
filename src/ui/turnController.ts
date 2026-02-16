@@ -6,7 +6,8 @@ const PHASE_ORDER: TurnPhase[] = [
   "AwaitingAnswer",
   "Resolving",
   "Propagating",
-  "NextTurn"
+  "NextTurn",
+  "GameOver"
 ];
 
 export function expectedPhaseForMove(move: Move): TurnPhase {
@@ -21,6 +22,9 @@ export function isValidPhaseTransition(from: TurnPhase, to: TurnPhase): boolean 
   const toIndex = PHASE_ORDER.indexOf(to);
   if (fromIndex === -1 || toIndex === -1) {
     return false;
+  }
+  if (to === "GameOver") {
+    return true;
   }
   return toIndex >= fromIndex || (from === "NextTurn" && to === "Idle");
 }

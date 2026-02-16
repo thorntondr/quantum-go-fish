@@ -10,6 +10,10 @@ function isKnownSuit(state: GameState, suit: string): boolean {
 }
 
 export function isLegalMove(state: GameState, move: Move): LegalResult {
+  if (state.turnState.phase === "GameOver" || state.turnState.winner) {
+    return { ok: false, reason: "Game is already over." };
+  }
+
   if (move.kind === "Ask") {
     if (!isKnownPlayer(state, move.asker) || !isKnownPlayer(state, move.target)) {
       return { ok: false, reason: "Unknown player in Ask move." };

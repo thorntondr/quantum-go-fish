@@ -19,6 +19,10 @@ test("Random legal sequences preserve invariants", () => {
   let state = makeState();
 
   for (let i = 0; i < 100; i += 1) {
+    if (state.turnState.phase === "GameOver") {
+      break;
+    }
+
     const candidates = legalMovesForState(state);
     const legal = candidates.filter((move) => isLegalMove(state, move).ok) as Move[];
     assert.ok(legal.length > 0);

@@ -11,7 +11,10 @@ export type TurnPhase =
   | "AwaitingAnswer"
   | "Resolving"
   | "Propagating"
-  | "NextTurn";
+  | "NextTurn"
+  | "GameOver";
+
+export type WinReason = "GuaranteedFourOfSuit" | "AllCardsKnown";
 
 export interface PendingAsk {
   asker: PlayerId;
@@ -23,6 +26,8 @@ export interface TurnState {
   phase: TurnPhase;
   currentPlayer: PlayerId;
   pendingAsk?: PendingAsk;
+  winner?: PlayerId;
+  winReason?: WinReason;
 }
 
 export interface GameState {
