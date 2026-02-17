@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quantum Go Fish - Manual Web UI</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --text: #1f2430;
+      --muted: #5b6475;
+      --accent: #0f766e;
+      --danger: #b42318;
+      --border: #d8deea;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      background: linear-gradient(120deg, #eef2ff 0%, var(--bg) 45%, #ecfeff 100%);
+    }
+
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(16, 24, 40, 0.06);
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.4rem;
+    }
+
+    #status {
+      font-weight: 600;
+      color: var(--accent);
+      margin: 0;
+    }
+
+    #error {
+      margin: 8px 0 0;
+      color: var(--danger);
+      min-height: 1.25rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      text-align: center;
+      padding: 8px 10px;
+    }
+
+    th {
+      background: #f8fafc;
+    }
+
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: end;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    select, button {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #c8d2e2;
+      background: #fff;
+      font-size: 0.95rem;
+    }
+
+    button {
+      cursor: pointer;
+      background: #f8fafc;
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    button:disabled, select:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    #legalMoves {
+      white-space: pre-wrap;
+      color: var(--muted);
+      margin: 0;
+      font-family: Consolas, "Courier New", monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="panel">
+      <h1>Quantum Go Fish Manual UI</h1>
+      <p id="status"></p>
+      <p id="error"></p>
+    </section>
+
+    <section class="panel">
+      <div id="state"></div>
+    </section>
+
+    <section class="panel">
+      <div class="controls-row">
+        <label>
+          Ask target
+          <select id="askTarget"></select>
+        </label>
+        <label>
+          Suit
+          <select id="askSuit"></select>
+        </label>
+        <button id="askBtn" class="primary">Ask</button>
+        <button id="yesBtn">Answer Yes</button>
+        <button id="noBtn">Answer No</button>
+        <button id="newGameBtn">New Game</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 style="margin-top: 0;">Legal Moves</h2>
+      <pre id="legalMoves"></pre>
+    </section>
+  </div>
+
+  <script type="module" src="../dist/src/web/main.js"></script>
+</body>
+</html>
