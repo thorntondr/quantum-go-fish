@@ -59,14 +59,23 @@ test("Current player wins when they guarantee four cards in a suit", () => {
 test("Current player wins when all card suits become known", () => {
   const config: SetupConfig = {
     players: ["A", "B"],
-    suits: ["S"],
-    suitTotals: { S: 4 },
-    handSizes: { A: 2, B: 2 },
+    suits: ["S1", "S2"],
+    suitTotals: { S1: 4, S2: 4 },
+    handSizes: { A: 4, B: 4 },
     startingPlayer: "A"
   };
 
   const state = createInitialState(config);
-  const next = applyMove(state, { kind: "Ask", asker: "A", target: "B", suit: "S" });
+  state.min.A.S1 = 3;
+  state.max.A.S1 = 3;
+  state.min.A.S2 = 1;
+  state.max.A.S2 = 1;
+  state.min.B.S1 = 1;
+  state.max.B.S1 = 1;
+  state.min.B.S2 = 3;
+  state.max.B.S2 = 3;
+
+  const next = applyMove(state, { kind: "Ask", asker: "A", target: "B", suit: "S2" });
 
   assert.equal(next.turnState.phase, "GameOver");
   assert.equal(next.turnState.currentPlayer, "A");

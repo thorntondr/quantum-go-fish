@@ -3,17 +3,10 @@ import { isLegalMove } from "../engine/rules.js";
 import type { GameState, Move, SetupConfig } from "../engine/types.js";
 import { renderState, submitMove } from "../ui/interaction.js";
 
-const defaultConfig: SetupConfig = {
-  players: ["A", "B", "C"],
-  suits: ["S", "H", "D"],
-  suitTotals: { S: 4, H: 4, D: 4 },
-  handSizes: { A: 4, B: 4, C: 4 },
-  startingPlayer: "A"
-};
-
 const stateRoot = byId("state");
 const statusRoot = byId("status");
 const errorRoot = byId("error");
+const playerCountInput = byId("playerCount") as HTMLInputElement;
 const askTarget = byId("askTarget") as HTMLSelectElement;
 const askSuit = byId("askSuit") as HTMLSelectElement;
 const askBtn = byId("askBtn") as HTMLButtonElement;
@@ -22,7 +15,7 @@ const noBtn = byId("noBtn") as HTMLButtonElement;
 const newGameBtn = byId("newGameBtn") as HTMLButtonElement;
 const legalMoves = byId("legalMoves");
 
-let state = createInitialState(defaultConfig);
+let state = createInitialState(buildConfig(3));
 
 function byId(id: string): HTMLElement {
   const node = document.getElementById(id);
@@ -38,6 +31,52 @@ function setError(message: string): void {
 
 function clearError(): void {
   setError("");
+}
+
+function playerLabel(index: number): string {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  if (index < alphabet.length) {
+    return alphabet[index];
+  }
+  return `P${index + 1}`;
+}
+
+function suitLabel(index: number): string {
+  return `S${index + 1}`;
+}
+
+function buildConfig(playerCount: number): SetupConfig {
+  const players = Array.from({ length: playerCount }, (_, i) => playerLabel(i));
+  const suits = Array.from({ length: playerCount }, (_, i) => suitLabel(i));
+
+  const suitTotals: Record<string, number> = {};
+  for (const suit of suits) {
+    suitTotals[suit] = 4;
+  }
+
+  const handSizes: Record<string, number> = {};
+  for (const player of players) {
+    handSizes[player] = 4;
+  }
+
+  return {
+    players,
+    suits,
+    suitTotals,
+    handSizes,
+    startingPlayer: players[0]
+  };
+}
+
+function parsePlayerCount(): number | undefined {
+  const n = Number.parseInt(playerCountInput.value, 10);
+  if (!Number.isFinite(n) || Number.isNaN(n)) {
+    return undefined;
+  }
+  if (n < 2 || n > 12) {
+    return undefined;
+  }
+  return n;
 }
 
 function legalAsks(current: GameState): Move[] {
@@ -178,7 +217,13 @@ noBtn.addEventListener("click", () => {
 });
 
 newGameBtn.addEventListener("click", () => {
-  state = createInitialState(defaultConfig);
+  const playerCount = parsePlayerCount();
+  if (!playerCount) {
+    setError("Player count must be an integer from 2 to 12.");
+    return;
+  }
+
+  state = createInitialState(buildConfig(playerCount));
   clearError();
   render();
 });

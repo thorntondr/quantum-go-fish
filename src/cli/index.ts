@@ -244,6 +244,10 @@ function playerLabel(index: number): string {
   return `P${index + 1}`;
 }
 
+function suitLabel(index: number): string {
+  return `S${index + 1}`;
+}
+
 async function createQuickStartState(): Promise<GameState> {
   const rl = createInterface({ input, output });
   try {
@@ -255,16 +259,10 @@ async function createQuickStartState(): Promise<GameState> {
         continue;
       }
 
-      const suits = ["S", "H", "D"];
-      const suitTotals = { S: 4, H: 4, D: 4 };
-      const totalCards = suits.reduce((acc, suit) => acc + suitTotals[suit as keyof typeof suitTotals], 0);
-      const baseHand = Math.floor(totalCards / n);
-      const remainder = totalCards % n;
+      const suits = Array.from({ length: n }, (_, i) => suitLabel(i));
+      const suitTotals: Record<string, number> = Object.fromEntries(suits.map((suit) => [suit, 4]));
       const players = Array.from({ length: n }, (_, i) => playerLabel(i));
-      const handSizes: Record<string, number> = {};
-      for (let i = 0; i < players.length; i += 1) {
-        handSizes[players[i]] = baseHand + (i < remainder ? 1 : 0);
-      }
+      const handSizes: Record<string, number> = Object.fromEntries(players.map((player) => [player, 4]));
 
       const config: SetupConfig = {
         players,

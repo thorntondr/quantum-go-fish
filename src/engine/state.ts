@@ -18,10 +18,16 @@ export function validateSetup(config: SetupConfig): void {
   if (config.suits.length === 0) {
     throw new Error("Setup requires at least one suit.");
   }
+  if (config.suits.length !== config.players.length) {
+    throw new Error("Setup requires number of suits to equal number of players.");
+  }
 
   for (const player of config.players) {
     if (!(player in config.handSizes)) {
       throw new Error(`Missing hand size for player ${player}.`);
+    }
+    if (config.handSizes[player] !== 4) {
+      throw new Error(`Player ${player} must start with exactly 4 cards.`);
     }
   }
 
@@ -29,8 +35,8 @@ export function validateSetup(config: SetupConfig): void {
     if (!(suit in config.suitTotals)) {
       throw new Error(`Missing suit total for suit ${suit}.`);
     }
-    if (config.suitTotals[suit] < 0) {
-      throw new Error(`Suit total cannot be negative for suit ${suit}.`);
+    if (config.suitTotals[suit] !== 4) {
+      throw new Error(`Suit ${suit} must have exactly 4 total cards.`);
     }
   }
 

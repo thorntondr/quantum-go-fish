@@ -92,6 +92,15 @@
       font-size: 0.95rem;
     }
 
+    input[type="number"] {
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #c8d2e2;
+      background: #fff;
+      font-size: 0.95rem;
+      width: 92px;
+    }
+
     button {
       cursor: pointer;
       background: #f8fafc;
@@ -130,6 +139,10 @@
 
     <section class="panel">
       <div class="controls-row">
+        <label>
+          Players
+          <input id="playerCount" type="number" min="2" max="12" step="1" value="3">
+        </label>
         <label>
           Ask target
           <select id="askTarget"></select>
