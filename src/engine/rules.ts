@@ -50,7 +50,7 @@ export function isLegalMove(state: GameState, move: Move): LegalResult {
 
   if (move.kind === "AnswerYes") {
     if (state.max[move.target][move.suit] <= 0) {
-      return { ok: false, reason: "AnswerYes illegal: target cannot have asked suit." };
+      return { ok: false, reason: "AnswerYes illegal: target does not have asked suit." };
     }
     return { ok: true };
   }
