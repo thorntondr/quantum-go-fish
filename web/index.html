@@ -3,38 +3,47 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Quantum Go Fish - Manual Web UI</title>
+  <title>Quantum Go Fish - Multiplayer Playtest</title>
   <style>
     :root {
-      --bg: #f4f6fb;
+      --bg: #edf3ee;
       --card: #ffffff;
-      --text: #1f2430;
-      --muted: #5b6475;
-      --accent: #0f766e;
-      --danger: #b42318;
-      --border: #d8deea;
+      --ink: #10251e;
+      --muted: #436054;
+      --accent: #1d7a5a;
+      --accent-2: #145c44;
+      --danger: #a11a1a;
+      --border: #c6d6cd;
+    }
+
+    * {
+      box-sizing: border-box;
     }
 
     body {
       margin: 0;
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      color: var(--text);
-      background: linear-gradient(120deg, #eef2ff 0%, var(--bg) 45%, #ecfeff 100%);
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 8%, #dff0e6 0%, rgba(223, 240, 230, 0) 40%),
+        radial-gradient(circle at 88% 12%, #deebff 0%, rgba(222, 235, 255, 0) 38%),
+        linear-gradient(130deg, #f5fbf7 0%, #e9f0f7 55%, #edf3ee 100%);
+      min-height: 100vh;
     }
 
     .wrap {
-      max-width: 980px;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 24px 16px 48px;
+      padding: 20px 14px 40px;
     }
 
     .panel {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 8px 24px rgba(16, 24, 40, 0.06);
-      margin-bottom: 16px;
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 8px 20px rgba(12, 32, 24, 0.08);
+      margin-bottom: 14px;
     }
 
     h1 {
@@ -42,16 +51,103 @@
       font-size: 1.4rem;
     }
 
-    #status {
-      font-weight: 600;
-      color: var(--accent);
-      margin: 0;
+    h2 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
     }
 
-    #error {
-      margin: 8px 0 0;
+    p {
+      margin: 6px 0;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .err {
       color: var(--danger);
-      min-height: 1.25rem;
+      min-height: 1.1rem;
+      margin: 4px 0;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: end;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      min-width: 110px;
+    }
+
+    input, select, button, textarea {
+      border: 1px solid #b8cabf;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    input[type="number"] {
+      width: 90px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 84px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.85rem;
+      resize: vertical;
+    }
+
+    button {
+      cursor: pointer;
+      background: #f5faf7;
+    }
+
+    button.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    button.alt {
+      border-color: var(--accent-2);
+      background: var(--accent-2);
+      color: #fff;
+    }
+
+    button:disabled, select:disabled, input:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.84rem;
+      color: #1d3b30;
     }
 
     table {
@@ -66,83 +162,118 @@
     }
 
     th {
-      background: #f8fafc;
+      background: #f5faf7;
     }
 
-    .controls-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: end;
-    }
-
-    label {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 0.9rem;
-      color: var(--muted);
-    }
-
-    select, button {
-      padding: 8px 10px;
+    #eventLog {
+      max-height: 260px;
+      overflow: auto;
+      background: #f8fcf9;
+      border: 1px solid var(--border);
       border-radius: 8px;
-      border: 1px solid #c8d2e2;
-      background: #fff;
-      font-size: 0.95rem;
+      padding: 10px;
     }
 
-    input[type="number"] {
-      padding: 8px 10px;
-      border-radius: 8px;
-      border: 1px solid #c8d2e2;
-      background: #fff;
-      font-size: 0.95rem;
-      width: 92px;
-    }
-
-    button {
-      cursor: pointer;
-      background: #f8fafc;
-    }
-
-    button.primary {
-      background: var(--accent);
-      color: #fff;
-      border-color: var(--accent);
-    }
-
-    button:disabled, select:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-    }
-
-    #legalMoves {
-      white-space: pre-wrap;
-      color: var(--muted);
-      margin: 0;
-      font-family: Consolas, "Courier New", monospace;
+    @media (max-width: 960px) {
+      .grid-2, .grid-3 {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 <body>
   <div class="wrap">
     <section class="panel">
-      <h1>Quantum Go Fish Manual UI</h1>
-      <p id="status"></p>
-      <p id="error"></p>
+      <h1>Quantum Go Fish Multiplayer Playtest</h1>
+      <p id="status" class="muted"></p>
+      <p id="sessionError" class="err"></p>
+      <p id="moveError" class="err"></p>
     </section>
 
     <section class="panel">
+      <h2>Session</h2>
+      <div class="controls-row" style="margin-bottom: 10px;">
+        <label>
+          Role
+          <select id="role">
+            <option value="host">Host</option>
+            <option value="peer">Join</option>
+          </select>
+        </label>
+        <label>
+          Name
+          <input id="displayName" type="text" value="Player">
+        </label>
+        <label>
+          Players
+          <input id="expectedPlayers" type="number" min="2" max="4" step="1" value="3">
+        </label>
+        <button id="initSessionBtn" class="primary">Initialize Session</button>
+        <button id="startGameBtn" class="alt">Start Game</button>
+        <button id="requestSyncBtn">Request/Send Sync</button>
+      </div>
+
+      <div class="grid-2">
+        <section id="hostControls" class="panel" style="margin: 0;">
+          <h2>Host Signaling</h2>
+          <div class="controls-row">
+            <label>
+              Peer ID
+              <input id="hostPeerId" type="text" placeholder="peer-1">
+            </label>
+            <button id="hostCreateOfferBtn">Create Host Offer</button>
+            <button id="hostAcceptAnswerBtn">Accept Answer</button>
+            <button id="hostDrainIceBtn">Collect Local ICE</button>
+            <button id="hostApplyRemoteIceBtn">Apply Remote ICE</button>
+          </div>
+          <p class="muted">Offer (copy to peer)</p>
+          <textarea id="hostOfferOut"></textarea>
+          <p class="muted">Answer from peer (paste here)</p>
+          <textarea id="hostAnswerIn"></textarea>
+          <p class="muted">Local ICE bundle (copy to peer)</p>
+          <textarea id="hostLocalIceOut"></textarea>
+          <p class="muted">Remote ICE bundle from peer</p>
+          <textarea id="hostRemoteIceIn"></textarea>
+        </section>
+
+        <section id="peerControls" class="panel" style="margin: 0;">
+          <h2>Join Signaling</h2>
+          <div class="controls-row">
+            <button id="peerCreateAnswerBtn">Accept Offer + Create Answer</button>
+            <button id="peerDrainIceBtn">Collect Local ICE</button>
+            <button id="peerApplyRemoteIceBtn">Apply Remote ICE</button>
+          </div>
+          <p class="muted">Host offer (paste here)</p>
+          <textarea id="peerOfferIn"></textarea>
+          <p class="muted">Peer answer (copy to host)</p>
+          <textarea id="peerAnswerOut"></textarea>
+          <p class="muted">Local ICE bundle (copy to host)</p>
+          <textarea id="peerLocalIceOut"></textarea>
+          <p class="muted">Remote ICE bundle from host</p>
+          <textarea id="peerRemoteIceIn"></textarea>
+        </section>
+      </div>
+
+      <div class="grid-2" style="margin-top: 12px;">
+        <section class="panel" style="margin: 0;">
+          <h2>Roster</h2>
+          <pre id="roster">No connections.</pre>
+        </section>
+        <section class="panel" style="margin: 0;">
+          <h2>Event Log</h2>
+          <pre id="eventLog"></pre>
+        </section>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Game State</h2>
       <div id="state"></div>
     </section>
 
     <section class="panel">
+      <h2>Moves</h2>
       <div class="controls-row">
-        <label>
-          Players
-          <input id="playerCount" type="number" min="2" max="12" step="1" value="3">
-        </label>
         <label>
           Ask target
           <select id="askTarget"></select>
@@ -154,12 +285,11 @@
         <button id="askBtn" class="primary">Ask</button>
         <button id="yesBtn">Answer Yes</button>
         <button id="noBtn">Answer No</button>
-        <button id="newGameBtn">New Game</button>
       </div>
     </section>
 
     <section class="panel">
-      <h2 style="margin-top: 0;">Legal Moves</h2>
+      <h2>Legal Moves</h2>
       <pre id="legalMoves"></pre>
     </section>
   </div>
