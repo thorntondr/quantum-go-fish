@@ -27,6 +27,137 @@ function parseCandidates(raw: string): RTCIceCandidateInit[] {
   return parsed.candidates;
 }
 
+function normalizeSdp(rawSdp: string): string {
+  return `${rawSdp.trim().replace(/\r?\n/g, "\r\n")}\r\n`;
+}
+
+function extractSdpInput(raw: string, expectedType: "offer" | "answer"): string {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    throw new Error(`Missing ${expectedType} SDP. Paste the full ${expectedType} text first.`);
+  }
+  if (!trimmed.startsWith("{")) {
+    return trimmed;
+  }
+  try {
+    const parsed = JSON.parse(trimmed) as { type?: string; sdp?: string };
+    if (typeof parsed.sdp !== "string" || !parsed.sdp.trim()) {
+      throw new Error("Missing sdp field.");
+    }
+    if (parsed.type && parsed.type !== expectedType) {
+      throw new Error(`Expected type=${expectedType}, received type=${parsed.type}.`);
+    }
+    return parsed.sdp;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Invalid ${expectedType} payload: ${message}`);
+  }
+}
+
+function validateOfferAnswerSdpShape(sdp: string, expectedType: "offer" | "answer"): void {
+  const normalized = normalizeSdp(sdp);
+  const lines = normalized.split("\r\n").filter(Boolean);
+  if (lines.length < 5 || lines[0] !== "v=0") {
+    throw new Error(
+      `${expectedType} SDP appears incomplete (must start with 'v=0'). Copy the entire signaling text, not a partial selection.`
+    );
+  }
+  if (!lines.some((line) => line.startsWith("m=application "))) {
+    throw new Error(
+      `${expectedType} SDP is missing the data-channel media section ('m=application ...'). Ensure the full offer/answer was copied.`
+    );
+  }
+}
+
+function sanitizeSdpForInterop(sdp: string): string {
+  return normalizeSdp(sdp)
+    .split("\r\n")
+    .filter((line) => line && !line.startsWith("a=max-message-size:"))
+    .join("\r\n");
+}
+
+function extractInvalidSdpLine(errorMessage: string): string | undefined {
+  const match = errorMessage.match(/SessionDescription\.\s*(.+?)\s+Invalid SDP line\./i);
+  return match?.[1]?.trim();
+}
+
+function removeExactSdpLine(sdp: string, targetLine: string): string {
+  const target = targetLine.trim();
+  return sdp
+    .split("\r\n")
+    .filter((line) => line.trim() !== target)
+    .join("\r\n");
+}
+
+async function setRemoteDescriptionAdaptive(
+  pc: RTCPeerConnection,
+  type: RTCSdpType,
+  sdp: string
+): Promise<void> {
+  let current = sdp;
+  const removed = new Set<string>();
+  const maxAttempts = 6;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      await pc.setRemoteDescription({ type, sdp: current });
+      return;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (!/Invalid SDP line/i.test(msg)) {
+        throw error;
+      }
+      const invalidLine = extractInvalidSdpLine(msg);
+      if (!invalidLine || !invalidLine.startsWith("a=") || removed.has(invalidLine)) {
+        throw error;
+      }
+      const next = removeExactSdpLine(current, invalidLine);
+      if (next === current) {
+        throw error;
+      }
+      removed.add(invalidLine);
+      current = next;
+    }
+  }
+  throw new Error("Failed to apply remote SDP after compatibility retries.");
+}
+
+async function setRemoteDescriptionWithFallback(
+  pc: RTCPeerConnection,
+  type: RTCSdpType,
+  sdp: string
+): Promise<void> {
+  const normalized = normalizeSdp(sdp);
+  validateOfferAnswerSdpShape(normalized, type === "offer" ? "offer" : "answer");
+  const variants = [normalized, sanitizeSdpForInterop(normalized)];
+  const attempted = new Set<string>();
+  let lastError: unknown;
+  let firstErrorMessage: string | undefined;
+
+  for (const variant of variants) {
+    if (attempted.has(variant)) {
+      continue;
+    }
+    attempted.add(variant);
+    try {
+      await setRemoteDescriptionAdaptive(pc, type, variant);
+      return;
+    } catch (error) {
+      lastError = error;
+      const msg = error instanceof Error ? error.message : String(error);
+      if (!firstErrorMessage) {
+        firstErrorMessage = msg;
+      }
+      if (!/Invalid SDP line/i.test(msg)) {
+        throw error;
+      }
+    }
+  }
+  const lastMessage = lastError instanceof Error ? lastError.message : String(lastError);
+  throw new Error(
+    `Failed to apply remote SDP after compatibility retries. firstError="${firstErrorMessage ?? "unknown"}"; lastError="${lastMessage}".`
+  );
+}
+
 interface HostPeerConnection {
   pc: RTCPeerConnection;
   channel?: RTCDataChannel;
@@ -95,7 +226,8 @@ export class HostWebRtcTransport implements SessionTransport {
     if (!peer) {
       throw new Error(`Unknown peer ${peerId}.`);
     }
-    await peer.pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
+    const sdp = extractSdpInput(answerSdp, "answer");
+    await setRemoteDescriptionWithFallback(peer.pc, "answer", sdp);
   }
 
   drainLocalIce(peerId: PeerId): string {
@@ -206,7 +338,8 @@ export class PeerWebRtcTransport implements SessionTransport {
   }
 
   async acceptOfferAndCreateAnswer(offerSdp: string): Promise<string> {
-    await this.pc.setRemoteDescription({ type: "offer", sdp: offerSdp });
+    const sdp = extractSdpInput(offerSdp, "offer");
+    await setRemoteDescriptionWithFallback(this.pc, "offer", sdp);
     const answer = await this.pc.createAnswer();
     await this.pc.setLocalDescription(answer);
     if (!answer.sdp) {

@@ -323,6 +323,9 @@ function initSession(): void {
     appendLog("Peer session initialized.");
   }
   toggleRolePanels();
+  // Initial callbacks can fire before hostSession/peerSession assignment completes.
+  // Render once more so button enabled/disabled state reflects final session references.
+  render();
 }
 
 function toggleRolePanels(): void {
