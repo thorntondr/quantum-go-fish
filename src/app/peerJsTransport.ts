@@ -110,35 +110,36 @@ export class HostPeerJsTransport implements SessionTransport {
 
 export class PeerPeerJsTransport implements SessionTransport {
   private readonly peer: PeerLike;
-  private readonly hostPeerId: PeerId;
+  private readonly hostRemotePeerId: PeerId;
+  private readonly hostLogicalPeerId: PeerId = "host";
   private conn: DataConnectionLike | undefined;
   private messageHandler: (from: PeerId, message: SessionMessage) => void = () => {};
   private peerStateHandler: (peerId: PeerId, status: PeerStatus) => void = () => {};
   private readyHandler: (peerId: PeerId) => void = () => {};
 
   constructor(hostPeerId: PeerId, localPeerId?: string) {
-    this.hostPeerId = hostPeerId;
+    this.hostRemotePeerId = hostPeerId;
     const Peer = peerCtor();
     this.peer = new Peer(localPeerId);
     this.peer.on("open", (id: string) => {
       this.readyHandler(id);
       this.openHostConnection();
     });
-    this.peer.on("error", () => this.peerStateHandler(this.hostPeerId, "error"));
-    this.peer.on("disconnected", () => this.peerStateHandler(this.hostPeerId, "closed"));
-    this.peer.on("close", () => this.peerStateHandler(this.hostPeerId, "closed"));
+    this.peer.on("error", () => this.peerStateHandler(this.hostLogicalPeerId, "error"));
+    this.peer.on("disconnected", () => this.peerStateHandler(this.hostLogicalPeerId, "closed"));
+    this.peer.on("close", () => this.peerStateHandler(this.hostLogicalPeerId, "closed"));
   }
 
   private openHostConnection(): void {
-    this.peerStateHandler(this.hostPeerId, "connecting");
-    const conn = this.peer.connect(this.hostPeerId, { reliable: true });
+    this.peerStateHandler(this.hostLogicalPeerId, "connecting");
+    const conn = this.peer.connect(this.hostRemotePeerId, { reliable: true });
     this.conn = conn;
-    conn.on("open", () => this.peerStateHandler(this.hostPeerId, "open"));
-    conn.on("close", () => this.peerStateHandler(this.hostPeerId, "closed"));
-    conn.on("error", () => this.peerStateHandler(this.hostPeerId, "error"));
+    conn.on("open", () => this.peerStateHandler(this.hostLogicalPeerId, "open"));
+    conn.on("close", () => this.peerStateHandler(this.hostLogicalPeerId, "closed"));
+    conn.on("error", () => this.peerStateHandler(this.hostLogicalPeerId, "error"));
     conn.on("data", (raw: unknown) => {
       const parsed = parseMessage(String(raw));
-      this.messageHandler(this.hostPeerId, parsed);
+      this.messageHandler(this.hostLogicalPeerId, parsed);
     });
   }
 
@@ -147,7 +148,7 @@ export class PeerPeerJsTransport implements SessionTransport {
   }
 
   send(to: PeerId, message: SessionMessage): void {
-    if (to !== this.hostPeerId) {
+    if (to !== this.hostLogicalPeerId) {
       throw new Error("Peer transport can only send to host.");
     }
     if (!this.conn || !this.conn.open) {
@@ -157,11 +158,11 @@ export class PeerPeerJsTransport implements SessionTransport {
   }
 
   broadcast(message: SessionMessage): void {
-    this.send(this.hostPeerId, message);
+    this.send(this.hostLogicalPeerId, message);
   }
 
   listPeers(): PeerId[] {
-    return [this.hostPeerId];
+    return [this.hostLogicalPeerId];
   }
 
   onMessage(handler: (from: PeerId, message: SessionMessage) => void): void {
