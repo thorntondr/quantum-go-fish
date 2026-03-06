@@ -42,50 +42,22 @@ This runs TypeScript build + Node test suite (engine + session/protocol tests).
    ```
 3. Open `web/index.html` from that server in your browser (do not use `file://`).
 
-## Multiplayer playtest flow (manual signaling)
+## Multiplayer playtest flow (PeerJS Cloud)
 
 Use two browser windows/devices: one **Host**, one **Join**.  
-For 3-4 players, repeat the Join steps per peer (host uses a unique `Peer ID` for each).
+For 3-4 players, open additional Join clients with unique local peer ids.
 
-### Host side
-
-1. Set:
+1. Host sets:
    - `Role = Host`
-   - `Players = 2..4`
-2. Click `Initialize Session`.
-3. Enter `Peer ID` (for example `peer-1`).
-4. Click `Create Host Offer`.
-5. Copy `Host Signaling -> Offer` text to the joiner.
-
-After joiner replies:
-
-6. Paste joiner answer into `Answer from peer`.
-7. Click `Accept Answer`.
-
-ICE exchange (repeat as needed):
-
-8. Click `Collect Local ICE`, copy `Local ICE bundle`, send to joiner.
-9. Paste joiner ICE into `Remote ICE bundle from peer`.
-10. Click `Apply Remote ICE`.
-
-When peer state is `open`, click `Start Game`.
-
-### Join side
-
-1. Set:
+   - `Host Code` (share this value with joiners)
+   - `Local Peer ID` (usually same as host code)
+2. Joiner sets:
    - `Role = Join`
-   - `Name = your label`
-   - `Players = same value as host`
-2. Click `Initialize Session`.
-3. Paste host offer into `Host offer`.
-4. Click `Accept Offer + Create Answer`.
-5. Copy `Peer answer` back to host.
-
-ICE exchange (repeat as needed):
-
-6. Click `Collect Local ICE`, copy bundle to host.
-7. Paste host ICE into `Remote ICE bundle from host`.
-8. Click `Apply Remote ICE`.
+   - `Host Code` (host's shared code)
+   - `Local Peer ID` (unique per joiner)
+3. Click `Initialize Session` on all clients.
+4. PeerJS Cloud handles signaling and host/peer channels open automatically.
+5. When peers are open, host clicks `Start Game`.
 
 After host starts game and assigns you a player, your move buttons enable only when legal for your player/turn.
 
@@ -109,6 +81,6 @@ After host starts game and assigns you a player, your move buttons enable only w
 
 ## Current limitations
 
-- Signaling is manual copy/paste (no signaling server).
+- Depends on PeerJS Cloud availability for signaling bootstrap.
 - No reconnect/resume after full disconnect.
 - Host trust model only (not hardened for adversarial peers).

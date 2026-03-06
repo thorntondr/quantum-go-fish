@@ -2,7 +2,7 @@ import { createHostSession, createPeerSession } from "../app/sessionController.j
 import type { HostSession, PeerSession } from "../app/sessionController.js";
 import type { RoomConfig } from "../app/sessionTypes.js";
 import type { ConnectionState } from "../app/sessionTypes.js";
-import { HostWebRtcTransport, PeerWebRtcTransport } from "../app/webrtcTransport.js";
+import { HostPeerJsTransport, PeerPeerJsTransport } from "../app/peerJsTransport.js";
 import { createInitialState } from "../engine/state.js";
 import { isLegalMove } from "../engine/rules.js";
 import type { GameState, Move, SetupConfig } from "../engine/types.js";
@@ -19,29 +19,11 @@ const eventLogRoot = byId("eventLog");
 const roleSelect = byId("role") as HTMLSelectElement;
 const displayNameInput = byId("displayName") as HTMLInputElement;
 const expectedPlayersInput = byId("expectedPlayers") as HTMLInputElement;
+const hostCodeInput = byId("hostCode") as HTMLInputElement;
+const localPeerIdInput = byId("localPeerId") as HTMLInputElement;
 const initSessionBtn = byId("initSessionBtn") as HTMLButtonElement;
 const startGameBtn = byId("startGameBtn") as HTMLButtonElement;
 const requestSyncBtn = byId("requestSyncBtn") as HTMLButtonElement;
-
-const hostControls = byId("hostControls");
-const hostPeerIdInput = byId("hostPeerId") as HTMLInputElement;
-const hostCreateOfferBtn = byId("hostCreateOfferBtn") as HTMLButtonElement;
-const hostOfferOut = byId("hostOfferOut") as HTMLTextAreaElement;
-const hostAnswerIn = byId("hostAnswerIn") as HTMLTextAreaElement;
-const hostAcceptAnswerBtn = byId("hostAcceptAnswerBtn") as HTMLButtonElement;
-const hostDrainIceBtn = byId("hostDrainIceBtn") as HTMLButtonElement;
-const hostLocalIceOut = byId("hostLocalIceOut") as HTMLTextAreaElement;
-const hostRemoteIceIn = byId("hostRemoteIceIn") as HTMLTextAreaElement;
-const hostApplyRemoteIceBtn = byId("hostApplyRemoteIceBtn") as HTMLButtonElement;
-
-const peerControls = byId("peerControls");
-const peerOfferIn = byId("peerOfferIn") as HTMLTextAreaElement;
-const peerCreateAnswerBtn = byId("peerCreateAnswerBtn") as HTMLButtonElement;
-const peerAnswerOut = byId("peerAnswerOut") as HTMLTextAreaElement;
-const peerDrainIceBtn = byId("peerDrainIceBtn") as HTMLButtonElement;
-const peerLocalIceOut = byId("peerLocalIceOut") as HTMLTextAreaElement;
-const peerRemoteIceIn = byId("peerRemoteIceIn") as HTMLTextAreaElement;
-const peerApplyRemoteIceBtn = byId("peerApplyRemoteIceBtn") as HTMLButtonElement;
 
 const askTarget = byId("askTarget") as HTMLSelectElement;
 const askSuit = byId("askSuit") as HTMLSelectElement;
@@ -54,8 +36,8 @@ let assignedPlayer: string | undefined;
 let gameStarted = false;
 let hostSession: HostSession | undefined;
 let peerSession: PeerSession | undefined;
-let hostTransport: HostWebRtcTransport | undefined;
-let peerTransport: PeerWebRtcTransport | undefined;
+let hostTransport: HostPeerJsTransport | undefined;
+let peerTransport: PeerPeerJsTransport | undefined;
 
 function byId(id: string): HTMLElement {
   const node = document.getElementById(id);
@@ -128,6 +110,25 @@ function parseExpectedPlayers(): number | undefined {
     return undefined;
   }
   return n;
+}
+
+function ensurePeerIdDefaultForRole(): void {
+  const role = roleSelect.value;
+  const currentPeerId = localPeerIdInput.value.trim();
+  const currentHostCode = hostCodeInput.value.trim();
+  if (!currentHostCode) {
+    hostCodeInput.value = `qgf-${Math.floor(Math.random() * 100000)}`;
+  }
+  if (role === "host") {
+    const hostCode = hostCodeInput.value.trim();
+    if (!currentPeerId || currentPeerId.startsWith("peer-") || currentPeerId === "host") {
+      localPeerIdInput.value = hostCode || "qgf-host";
+    }
+    return;
+  }
+  if (!currentPeerId || currentPeerId === hostCodeInput.value.trim()) {
+    localPeerIdInput.value = `peer-${Math.floor(Math.random() * 10000)}`;
+  }
 }
 
 function legalAsks(current: GameState, asker: string): Move[] {
@@ -295,7 +296,7 @@ function closeSession(): void {
   rosterRoot.textContent = "No connections.";
 }
 
-function initSession(): void {
+async function initSession(): Promise<void> {
   clearErrors();
   closeSession();
 
@@ -305,6 +306,16 @@ function initSession(): void {
     return;
   }
   const role = roleSelect.value;
+  const hostCode = hostCodeInput.value.trim();
+  const localPeerId = localPeerIdInput.value.trim();
+  if (!hostCode) {
+    setSessionError("Host code is required.");
+    return;
+  }
+  if (!localPeerId) {
+    setSessionError("Local peer ID is required.");
+    return;
+  }
   const displayName = displayNameInput.value.trim() || "Player";
   const roomConfig: RoomConfig = {
     expectedPlayers,
@@ -314,24 +325,24 @@ function initSession(): void {
   render();
 
   if (role === "host") {
-    hostTransport = new HostWebRtcTransport();
+    hostTransport = new HostPeerJsTransport(localPeerId);
+    hostTransport.onReady((id) => {
+      hostCodeInput.value = id;
+      localPeerIdInput.value = id;
+      appendLog(`Host code ready: ${id}`);
+    });
     hostSession = createHostSession(roomConfig, sessionHooks(), { transport: hostTransport });
-    appendLog("Host session initialized.");
+    appendLog("Host session initialized (PeerJS Cloud).");
   } else {
-    peerTransport = new PeerWebRtcTransport();
+    peerTransport = new PeerPeerJsTransport(hostCode, localPeerId);
+    peerTransport.onReady((id) => {
+      localPeerIdInput.value = id;
+      appendLog(`Peer ID ready: ${id}`);
+    });
     peerSession = createPeerSession(sessionHooks(), { transport: peerTransport, displayName });
-    appendLog("Peer session initialized.");
+    appendLog(`Peer session initialized; connecting to host code ${hostCode}.`);
   }
-  toggleRolePanels();
-  // Initial callbacks can fire before hostSession/peerSession assignment completes.
-  // Render once more so button enabled/disabled state reflects final session references.
   render();
-}
-
-function toggleRolePanels(): void {
-  const role = roleSelect.value;
-  hostControls.hidden = role !== "host";
-  peerControls.hidden = role !== "peer";
 }
 
 function submitMove(move: Move): void {
@@ -347,9 +358,13 @@ function submitMove(move: Move): void {
   setMoveError("Session is not initialized.");
 }
 
-initSessionBtn.addEventListener("click", initSession);
+initSessionBtn.addEventListener("click", () => {
+  void initSession().catch((error) => {
+    setSessionError(error instanceof Error ? error.message : String(error));
+  });
+});
 roleSelect.addEventListener("change", () => {
-  toggleRolePanels();
+  ensurePeerIdDefaultForRole();
   render();
 });
 
@@ -373,108 +388,6 @@ requestSyncBtn.addEventListener("click", () => {
     return;
   }
   setSessionError("No session initialized.");
-});
-
-hostCreateOfferBtn.addEventListener("click", async () => {
-  try {
-    if (!hostTransport) {
-      throw new Error("Initialize host session first.");
-    }
-    const peerId = hostPeerIdInput.value.trim();
-    if (!peerId) {
-      throw new Error("Enter a peer id first.");
-    }
-    const offer = await hostTransport.createOffer(peerId);
-    hostOfferOut.value = offer;
-    appendLog(`Host offer created for ${peerId}.`);
-  } catch (error) {
-    setSessionError(error instanceof Error ? error.message : String(error));
-  }
-});
-
-hostAcceptAnswerBtn.addEventListener("click", async () => {
-  try {
-    if (!hostTransport) {
-      throw new Error("Initialize host session first.");
-    }
-    const peerId = hostPeerIdInput.value.trim();
-    if (!peerId) {
-      throw new Error("Enter a peer id first.");
-    }
-    await hostTransport.acceptAnswer(peerId, hostAnswerIn.value.trim());
-    appendLog(`Host answer accepted for ${peerId}.`);
-  } catch (error) {
-    setSessionError(error instanceof Error ? error.message : String(error));
-  }
-});
-
-hostDrainIceBtn.addEventListener("click", () => {
-  try {
-    if (!hostTransport) {
-      throw new Error("Initialize host session first.");
-    }
-    const peerId = hostPeerIdInput.value.trim();
-    if (!peerId) {
-      throw new Error("Enter a peer id first.");
-    }
-    hostLocalIceOut.value = hostTransport.drainLocalIce(peerId);
-    appendLog(`Host ICE drained for ${peerId}.`);
-  } catch (error) {
-    setSessionError(error instanceof Error ? error.message : String(error));
-  }
-});
-
-hostApplyRemoteIceBtn.addEventListener("click", async () => {
-  try {
-    if (!hostTransport) {
-      throw new Error("Initialize host session first.");
-    }
-    const peerId = hostPeerIdInput.value.trim();
-    if (!peerId) {
-      throw new Error("Enter a peer id first.");
-    }
-    await hostTransport.addRemoteIce(peerId, hostRemoteIceIn.value);
-    appendLog(`Host remote ICE applied for ${peerId}.`);
-  } catch (error) {
-    setSessionError(error instanceof Error ? error.message : String(error));
-  }
-});
-
-peerCreateAnswerBtn.addEventListener("click", async () => {
-  try {
-    if (!peerTransport) {
-      throw new Error("Initialize peer session first.");
-    }
-    const answer = await peerTransport.acceptOfferAndCreateAnswer(peerOfferIn.value.trim());
-    peerAnswerOut.value = answer;
-    appendLog("Peer answer created.");
-  } catch (error) {
-    setSessionError(error instanceof Error ? error.message : String(error));
-  }
-});
-
-peerDrainIceBtn.addEventListener("click", () => {
-  try {
-    if (!peerTransport) {
-      throw new Error("Initialize peer session first.");
-    }
-    peerLocalIceOut.value = peerTransport.drainLocalIce();
-    appendLog("Peer ICE drained.");
-  } catch (error) {
-    setSessionError(error instanceof Error ? error.message : String(error));
-  }
-});
-
-peerApplyRemoteIceBtn.addEventListener("click", async () => {
-  try {
-    if (!peerTransport) {
-      throw new Error("Initialize peer session first.");
-    }
-    await peerTransport.addRemoteIce(peerRemoteIceIn.value);
-    appendLog("Peer remote ICE applied.");
-  } catch (error) {
-    setSessionError(error instanceof Error ? error.message : String(error));
-  }
 });
 
 askBtn.addEventListener("click", () => {
@@ -509,5 +422,5 @@ noBtn.addEventListener("click", () => {
   submitMove({ kind: "AnswerNo", target: pending.target, suit: pending.suit });
 });
 
-toggleRolePanels();
+ensurePeerIdDefaultForRole();
 render();

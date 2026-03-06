@@ -167,6 +167,7 @@ interface HostPeerConnection {
 export class HostWebRtcTransport implements SessionTransport {
   private readonly peers = new Map<PeerId, HostPeerConnection>();
   private messageHandler: (from: PeerId, message: SessionMessage) => void = () => {};
+  private localIceHandler: (peerId: PeerId, candidate: RTCIceCandidateInit) => void = () => {};
   private peerStateHandler: (
     peerId: PeerId,
     status: "new" | "connecting" | "open" | "closed" | "error"
@@ -183,7 +184,9 @@ export class HostWebRtcTransport implements SessionTransport {
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        state.localIce.push(event.candidate.toJSON());
+        const candidate = event.candidate.toJSON();
+        state.localIce.push(candidate);
+        this.localIceHandler(peerId, candidate);
       }
     };
     pc.onconnectionstatechange = () => {
@@ -251,6 +254,14 @@ export class HostWebRtcTransport implements SessionTransport {
     }
   }
 
+  async addRemoteIceCandidate(peerId: PeerId, candidate: RTCIceCandidateInit): Promise<void> {
+    const peer = this.peers.get(peerId);
+    if (!peer) {
+      throw new Error(`Unknown peer ${peerId}.`);
+    }
+    await peer.pc.addIceCandidate(candidate);
+  }
+
   send(to: PeerId, message: SessionMessage): void {
     const peer = this.peers.get(to);
     if (!peer || !peer.channel) {
@@ -286,6 +297,10 @@ export class HostWebRtcTransport implements SessionTransport {
     this.peerStateHandler = handler;
   }
 
+  onLocalIceCandidate(handler: (peerId: PeerId, candidate: RTCIceCandidateInit) => void): void {
+    this.localIceHandler = handler;
+  }
+
   close(): void {
     for (const peer of this.peers.values()) {
       peer.channel?.close();
@@ -300,6 +315,7 @@ export class PeerWebRtcTransport implements SessionTransport {
   private channel?: RTCDataChannel;
   private readonly localIce: RTCIceCandidateInit[] = [];
   private messageHandler: (from: PeerId, message: SessionMessage) => void = () => {};
+  private localIceHandler: (candidate: RTCIceCandidateInit) => void = () => {};
   private peerStateHandler: (
     peerId: PeerId,
     status: "new" | "connecting" | "open" | "closed" | "error"
@@ -309,7 +325,9 @@ export class PeerWebRtcTransport implements SessionTransport {
   constructor() {
     this.pc.onicecandidate = (event) => {
       if (event.candidate) {
-        this.localIce.push(event.candidate.toJSON());
+        const candidate = event.candidate.toJSON();
+        this.localIce.push(candidate);
+        this.localIceHandler(candidate);
       }
     };
     this.pc.onconnectionstatechange = () => {
@@ -361,6 +379,10 @@ export class PeerWebRtcTransport implements SessionTransport {
     }
   }
 
+  async addRemoteIceCandidate(candidate: RTCIceCandidateInit): Promise<void> {
+    await this.pc.addIceCandidate(candidate);
+  }
+
   send(to: PeerId, message: SessionMessage): void {
     if (to !== this.hostPeerId) {
       throw new Error("Peer transport can only send to host.");
@@ -387,6 +409,10 @@ export class PeerWebRtcTransport implements SessionTransport {
     handler: (peerId: PeerId, status: "new" | "connecting" | "open" | "closed" | "error") => void
   ): void {
     this.peerStateHandler = handler;
+  }
+
+  onLocalIceCandidate(handler: (candidate: RTCIceCandidateInit) => void): void {
+    this.localIceHandler = handler;
   }
 
   close(): void {

@@ -208,51 +208,20 @@
           Players
           <input id="expectedPlayers" type="number" min="2" max="4" step="1" value="3">
         </label>
+        <label>
+          Host Code
+          <input id="hostCode" type="text" value="qgf-12345">
+        </label>
+        <label>
+          Local Peer ID
+          <input id="localPeerId" type="text" value="qgf-12345">
+        </label>
         <button id="initSessionBtn" class="primary">Initialize Session</button>
         <button id="startGameBtn" class="alt">Start Game</button>
         <button id="requestSyncBtn">Request/Send Sync</button>
       </div>
 
-      <div class="grid-2">
-        <section id="hostControls" class="panel" style="margin: 0;">
-          <h2>Host Signaling</h2>
-          <div class="controls-row">
-            <label>
-              Peer ID
-              <input id="hostPeerId" type="text" placeholder="peer-1">
-            </label>
-            <button id="hostCreateOfferBtn">Create Host Offer</button>
-            <button id="hostAcceptAnswerBtn">Accept Answer</button>
-            <button id="hostDrainIceBtn">Collect Local ICE</button>
-            <button id="hostApplyRemoteIceBtn">Apply Remote ICE</button>
-          </div>
-          <p class="muted">Offer (copy to peer)</p>
-          <textarea id="hostOfferOut"></textarea>
-          <p class="muted">Answer from peer (paste here)</p>
-          <textarea id="hostAnswerIn"></textarea>
-          <p class="muted">Local ICE bundle (copy to peer)</p>
-          <textarea id="hostLocalIceOut"></textarea>
-          <p class="muted">Remote ICE bundle from peer</p>
-          <textarea id="hostRemoteIceIn"></textarea>
-        </section>
-
-        <section id="peerControls" class="panel" style="margin: 0;">
-          <h2>Join Signaling</h2>
-          <div class="controls-row">
-            <button id="peerCreateAnswerBtn">Accept Offer + Create Answer</button>
-            <button id="peerDrainIceBtn">Collect Local ICE</button>
-            <button id="peerApplyRemoteIceBtn">Apply Remote ICE</button>
-          </div>
-          <p class="muted">Host offer (paste here)</p>
-          <textarea id="peerOfferIn"></textarea>
-          <p class="muted">Peer answer (copy to host)</p>
-          <textarea id="peerAnswerOut"></textarea>
-          <p class="muted">Local ICE bundle (copy to host)</p>
-          <textarea id="peerLocalIceOut"></textarea>
-          <p class="muted">Remote ICE bundle from host</p>
-          <textarea id="peerRemoteIceIn"></textarea>
-        </section>
-      </div>
+      <p class="muted">PeerJS Cloud handles signaling. Share the host code with joiners.</p>
 
       <div class="grid-2" style="margin-top: 12px;">
         <section class="panel" style="margin: 0;">
@@ -294,6 +263,7 @@
     </section>
   </div>
 
+  <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
   <script type="module" src="../dist/src/web/main.js"></script>
 </body>
 </html>
