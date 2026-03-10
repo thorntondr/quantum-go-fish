@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Quantum Go Fish</title>
+  <title>Quantum Go Fish - Multiplayer Playtest</title>
   <style>
     :root {
-      --bg: #eef3f0;
+      --bg: #edf3ee;
       --card: #ffffff;
       --ink: #10251e;
-      --muted: #476258;
+      --muted: #436054;
       --accent: #1d7a5a;
       --accent-2: #145c44;
       --danger: #a11a1a;
@@ -32,7 +32,7 @@
     }
 
     .wrap {
-      max-width: 1100px;
+      max-width: 1200px;
       margin: 0 auto;
       padding: 20px 14px 40px;
     }
@@ -41,7 +41,7 @@
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 16px;
+      padding: 14px;
       box-shadow: 0 8px 20px rgba(12, 32, 24, 0.08);
       margin-bottom: 14px;
     }
@@ -70,6 +70,18 @@
       margin: 4px 0;
     }
 
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
     .controls-row {
       display: flex;
       flex-wrap: wrap;
@@ -83,7 +95,7 @@
       gap: 4px;
       font-size: 0.9rem;
       color: var(--muted);
-      min-width: 140px;
+      min-width: 110px;
     }
 
     input, select, button, textarea {
@@ -94,6 +106,10 @@
       font-family: inherit;
       background: #fff;
       color: var(--ink);
+    }
+
+    input[type="number"] {
+      width: 90px;
     }
 
     textarea {
@@ -134,37 +150,32 @@
       color: #1d3b30;
     }
 
-    .grid-2 {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
+    table {
+      width: 100%;
+      border-collapse: collapse;
     }
 
-    .screen {
-      display: none;
-    }
-
-    .screen.active {
-      display: block;
-    }
-
-    .roster-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      gap: 6px;
-    }
-
-    .roster-item {
+    th, td {
+      border: 1px solid var(--border);
+      text-align: center;
       padding: 8px 10px;
+    }
+
+    th {
+      background: #f5faf7;
+    }
+
+    #eventLog {
+      max-height: 260px;
+      overflow: auto;
+      background: #f8fcf9;
       border: 1px solid var(--border);
       border-radius: 8px;
-      background: #f8fcf9;
+      padding: 10px;
     }
 
     @media (max-width: 960px) {
-      .grid-2 {
+      .grid-2, .grid-3 {
         grid-template-columns: 1fr;
       }
     }
@@ -173,76 +184,78 @@
 <body>
   <div class="wrap">
     <section class="panel">
-      <h1>Quantum Go Fish</h1>
+      <h1>Quantum Go Fish Multiplayer Playtest</h1>
       <p id="status" class="muted"></p>
       <p id="sessionError" class="err"></p>
       <p id="moveError" class="err"></p>
     </section>
 
-    <section id="screenLanding" class="panel screen active">
-      <h2>Start or Join</h2>
+    <section class="panel">
+      <h2>Session</h2>
       <div class="controls-row" style="margin-bottom: 10px;">
         <label>
-          Your Name
-          <input id="friendlyName" type="text" value="Player">
+          Role
+          <select id="role">
+            <option value="host">Host</option>
+            <option value="peer">Join</option>
+          </select>
         </label>
-        <button id="hostBtn" class="primary">Host</button>
-      </div>
-      <div class="controls-row">
         <label>
-          Room Code
-          <input id="roomCode" type="text" placeholder="qgf-12345">
+          Name
+          <input id="displayName" type="text" value="Player">
         </label>
-        <button id="joinBtn" class="alt">Join</button>
+        <label>
+          Host Code
+          <input id="hostCode" type="text" value="qgf-12345">
+        </label>
+        <label>
+          Local Peer ID
+          <input id="localPeerId" type="text" value="qgf-12345">
+        </label>
+        <button id="initSessionBtn" class="primary">Initialize Session</button>
+        <button id="startGameBtn" class="alt">Start Game</button>
+        <button id="requestSyncBtn">Request/Send Sync</button>
       </div>
-      <p class="muted">Hosting creates a room code to share. Joining connects to an existing host.</p>
-    </section>
 
-    <section id="screenWaiting" class="panel screen">
-      <h2>Waiting Room</h2>
-      <p class="muted">Room code: <strong id="waitingRoomCode">-</strong></p>
+      <p class="muted">PeerJS Cloud handles signaling. Share the host code with joiners.</p>
+
       <div class="grid-2" style="margin-top: 12px;">
         <section class="panel" style="margin: 0;">
-          <h2>Connected Players</h2>
-          <ul id="waitingRoster" class="roster-list"></ul>
+          <h2>Roster</h2>
+          <pre id="roster">No connections.</pre>
         </section>
         <section class="panel" style="margin: 0;">
           <h2>Event Log</h2>
           <pre id="eventLog"></pre>
         </section>
       </div>
-      <div class="controls-row" style="margin-top: 12px;">
-        <button id="waitingStartGameBtn" class="primary">Start Game</button>
+    </section>
+
+    <section class="panel">
+      <h2>Game State</h2>
+      <div id="state"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Moves</h2>
+      <div class="controls-row">
+        <label>
+          Ask target
+          <select id="askTarget"></select>
+        </label>
+        <label>
+          Suit
+          <select id="askSuit"></select>
+        </label>
+        <button id="askBtn" class="primary">Ask</button>
+        <button id="yesBtn">Answer Yes</button>
+        <button id="noBtn">Answer No</button>
       </div>
     </section>
 
-    <section id="screenGame" class="screen">
-      <section class="panel">
-        <h2>Game State</h2>
-        <div id="state"></div>
-      </section>
-
-      <section class="panel">
-        <h2>Moves</h2>
-        <div class="controls-row">
-          <label>
-            Ask target
-            <select id="askTarget"></select>
-          </label>
-          <label>
-            Suit
-            <select id="askSuit"></select>
-          </label>
-          <button id="askBtn" class="primary">Ask</button>
-          <button id="yesBtn">Answer Yes</button>
-          <button id="noBtn">Answer No</button>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Legal Moves</h2>
-        <pre id="legalMoves"></pre>
-      </section>
+    <section class="panel">
+      <h2>Legal Moves</h2>
+      <pre id="legalMoves"></pre>
     </section>
   </div>
 
