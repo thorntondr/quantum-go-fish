@@ -18,7 +18,6 @@ const eventLogRoot = byId("eventLog");
 
 const roleSelect = byId("role") as HTMLSelectElement;
 const displayNameInput = byId("displayName") as HTMLInputElement;
-const expectedPlayersInput = byId("expectedPlayers") as HTMLInputElement;
 const hostCodeInput = byId("hostCode") as HTMLInputElement;
 const localPeerIdInput = byId("localPeerId") as HTMLInputElement;
 const initSessionBtn = byId("initSessionBtn") as HTMLButtonElement;
@@ -31,7 +30,8 @@ const askBtn = byId("askBtn") as HTMLButtonElement;
 const yesBtn = byId("yesBtn") as HTMLButtonElement;
 const noBtn = byId("noBtn") as HTMLButtonElement;
 
-let state = createInitialState(buildConfig(3));
+const MAX_PLAYERS = 13;
+let state = createInitialState(buildConfig(1));
 let assignedPlayer: string | undefined;
 let gameStarted = false;
 let hostSession: HostSession | undefined;
@@ -99,17 +99,6 @@ function buildConfig(playerCount: number): SetupConfig {
     handSizes,
     startingPlayer: players[0]
   };
-}
-
-function parseExpectedPlayers(): number | undefined {
-  const n = Number.parseInt(expectedPlayersInput.value, 10);
-  if (!Number.isFinite(n) || Number.isNaN(n)) {
-    return undefined;
-  }
-  if (n < 2 || n > 4) {
-    return undefined;
-  }
-  return n;
 }
 
 function ensurePeerIdDefaultForRole(): void {
@@ -300,11 +289,6 @@ async function initSession(): Promise<void> {
   clearErrors();
   closeSession();
 
-  const expectedPlayers = parseExpectedPlayers();
-  if (!expectedPlayers) {
-    setSessionError("Expected players must be an integer from 2 to 4.");
-    return;
-  }
   const role = roleSelect.value;
   const hostCode = hostCodeInput.value.trim();
   const localPeerId = localPeerIdInput.value.trim();
@@ -318,10 +302,9 @@ async function initSession(): Promise<void> {
   }
   const displayName = displayNameInput.value.trim() || "Player";
   const roomConfig: RoomConfig = {
-    expectedPlayers,
-    setup: buildConfig(expectedPlayers)
+    setup: buildConfig(MAX_PLAYERS)
   };
-  state = createInitialState(roomConfig.setup);
+  state = createInitialState(buildConfig(1));
   render();
 
   if (role === "host") {

@@ -1,6 +1,6 @@
 import { applyMove } from "../engine/moves.js";
 import { createInitialState } from "../engine/state.js";
-import type { GameState, Move } from "../engine/types.js";
+import type { GameState, Move, SetupConfig } from "../engine/types.js";
 import { isLegalMove } from "../engine/rules.js";
 import { stateHash } from "./hash.js";
 import { buildMessage, makeClientId } from "./sessionProtocol.js";
@@ -85,12 +85,16 @@ export function createHostSession(
   const clientId = deps.clientId ?? makeClientId();
   const transport = deps.transport;
 
-  const baseState = deps.initialState ?? createInitialState(config.setup);
+  const hostPlayerId = config.setup.players[0];
+  const baseState =
+    deps.initialState ??
+    createInitialState(
+      buildSetupForPlayers(config.setup, [hostPlayerId])
+    );
   let sessionSeq = 0;
   let snapshot = snapshotFromState(baseState, sessionSeq);
   let started = false;
 
-  const hostPlayerId = config.setup.players[0];
   const connections = new Map<PeerId, ConnectionState>([
     [
       "self",
@@ -105,6 +109,55 @@ export function createHostSession(
   ]);
   const peerByClient = new Map<ClientId, PeerId>();
   const assignedByPeer = new Map<PeerId, string>();
+
+  function activeAssignedPlayers(): string[] {
+    const active = new Set<string>([hostPlayerId]);
+    for (const row of connections.values()) {
+      if (row.peerId === "self") {
+        continue;
+      }
+      if (row.status === "open" && row.playerId) {
+        active.add(row.playerId);
+      }
+    }
+    return config.setup.players.filter((playerId) => active.has(playerId));
+  }
+
+  function buildSetupForPlayers(template: SetupConfig, players: string[]): SetupConfig {
+    const suits = template.suits.slice(0, players.length);
+    const suitTotals: Record<string, number> = {};
+    const handSizes: Record<string, number> = {};
+
+    for (const suit of suits) {
+      suitTotals[suit] = template.suitTotals[suit] ?? 4;
+    }
+    for (const player of players) {
+      handSizes[player] = template.handSizes[player] ?? 4;
+    }
+
+    return {
+      players,
+      suits,
+      suitTotals,
+      handSizes,
+      startingPlayer: players[0],
+      version: template.version
+    };
+  }
+
+  function refreshSnapshotForRoster(reason: string): void {
+    if (started) {
+      return;
+    }
+    const players = activeAssignedPlayers();
+    if (players.length === 0) {
+      return;
+    }
+    sessionSeq = 0;
+    snapshot = snapshotFromState(createInitialState(buildSetupForPlayers(config.setup, players)), sessionSeq);
+    hooks.onSnapshot(snapshot);
+    hooks.onLog(`Updated pregame setup for ${players.length} player(s) (${reason}).`);
+  }
 
   function updateConnections(): void {
     hooks.onConnectionsChanged(rosterFromMap(connections));
@@ -179,6 +232,7 @@ export function createHostSession(
       assignedByPeer.delete(peerId);
       peerByClient.delete(existing.clientId);
       broadcastRosterLeft(peerId);
+      refreshSnapshotForRoster("peer_left");
     }
   });
 
@@ -205,13 +259,13 @@ export function createHostSession(
         return;
       }
       updateConnections();
+      refreshSnapshotForRoster("peer_joined");
 
       transport.send(
         fromPeerId,
         buildMessage(clientId, "welcome", {
           assignedPlayerId,
           roster: rosterFromMap(connections),
-          expectedPlayers: config.expectedPlayers,
           hostClientId: clientId
         })
       );
@@ -311,16 +365,17 @@ export function createHostSession(
       commitMove(move);
     },
     startGame(): void {
-      const openAssigned = rosterFromMap(connections).filter((c) => c.peerId !== "self" && c.status === "open" && !!c.playerId);
-      if (config.expectedPlayers < 2 || config.expectedPlayers > 4) {
-        hooks.onSessionError("expectedPlayers must be between 2 and 4.");
-        return;
-      }
-      if (openAssigned.length < config.expectedPlayers - 1) {
-        hooks.onSessionError("Not enough connected peers to start the game.");
+      const openAssigned = rosterFromMap(connections).filter(
+        (c) => c.peerId !== "self" && c.status === "open" && !!c.playerId
+      );
+      const playerCount = 1 + openAssigned.length;
+      const maxPlayers = config.setup.players.length;
+      if (playerCount < 2 || playerCount > maxPlayers) {
+        hooks.onSessionError(`Player count must be between 2 and ${maxPlayers}.`);
         return;
       }
 
+      refreshSnapshotForRoster("start_game");
       started = true;
       hooks.onGameStarted(true);
       hooks.onSnapshot(snapshot);

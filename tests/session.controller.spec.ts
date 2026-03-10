@@ -103,12 +103,27 @@ class MockPeerTransport implements SessionTransport {
 }
 
 function setupConfig2(): SetupConfig {
+  return setupConfigN(2);
+}
+
+function setupConfigN(count: number): SetupConfig {
+  const players = Array.from({ length: count }, (_, i) => String.fromCharCode(65 + i));
+  const suits =
+    count === 2 ? ["S", "H"] : Array.from({ length: count }, (_, i) => `S${i + 1}`);
+  const suitTotals: Record<string, number> = {};
+  const handSizes: Record<string, number> = {};
+  for (const suit of suits) {
+    suitTotals[suit] = 4;
+  }
+  for (const player of players) {
+    handSizes[player] = 4;
+  }
   return {
-    players: ["A", "B"],
-    suits: ["S", "H"],
-    suitTotals: { S: 4, H: 4 },
-    handSizes: { A: 4, B: 4 },
-    startingPlayer: "A"
+    players,
+    suits,
+    suitTotals,
+    handSizes,
+    startingPlayer: players[0]
   };
 }
 
@@ -116,7 +131,7 @@ test("Host session accepts legal move_request and broadcasts state_commit", () =
   const transport = new MockHostTransport();
   const errors: string[] = [];
   const host = createHostSession(
-    { expectedPlayers: 2, setup: setupConfig2() },
+    { setup: setupConfig2() },
     {
       onMoveError: (m) => errors.push(m),
       onSessionError: (m) => errors.push(m)
@@ -156,7 +171,7 @@ test("Host session accepts legal move_request and broadcasts state_commit", () =
 test("Host session rejects illegal move_request without mutating state", () => {
   const transport = new MockHostTransport();
   const host = createHostSession(
-    { expectedPlayers: 2, setup: setupConfig2() },
+    { setup: setupConfig2() },
     {},
     {
       transport,
@@ -220,7 +235,6 @@ test("Peer session requests sync on commit sequence gap", () => {
     buildMessage("host-client", "welcome", {
       assignedPlayerId: "B",
       roster: [],
-      expectedPlayers: 2,
       hostClientId: "host-client"
     })
   );
@@ -242,4 +256,35 @@ test("Peer session requests sync on commit sequence gap", () => {
 
   const hasSyncRequest = transport.sentToHost.some((m) => m.kind === "sync_request");
   assert.equal(hasSyncRequest, true);
+});
+
+test("Host session supports starting with 13 connected players", () => {
+  const transport = new MockHostTransport();
+  const errors: string[] = [];
+  const host = createHostSession(
+    { setup: setupConfigN(13) },
+    {
+      onSessionError: (m) => errors.push(m)
+    },
+    {
+      transport,
+      clientId: "host-client"
+    }
+  );
+
+  for (let i = 1; i <= 12; i += 1) {
+    const peerId = `peer-${i}`;
+    transport.emitPeerState(peerId, "open");
+    transport.emitFrom(
+      peerId,
+      buildMessage(`peer-client-${i}`, "hello", {
+        displayName: `Peer ${i}`
+      })
+    );
+  }
+
+  host.startGame();
+
+  assert.equal(errors.length, 0);
+  assert.equal(host.getSnapshot().state.players.length, 13);
 });

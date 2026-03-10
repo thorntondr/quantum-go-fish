@@ -6,7 +6,6 @@ export type PeerId = string;
 export type ClientId = string;
 
 export interface RoomConfig {
-  expectedPlayers: number;
   setup: SetupConfig;
 }
 
@@ -53,7 +52,6 @@ export type SessionMessage =
       kind: "welcome";
       assignedPlayerId: PlayerId;
       roster: ConnectionState[];
-      expectedPlayers: number;
       hostClientId: ClientId;
     })
   | (BaseSessionMessage & {
