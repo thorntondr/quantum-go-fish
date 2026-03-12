@@ -21,4 +21,8 @@
 1. Add an info button that shows full instructions on how to play the game
 1. Randomize starting player instead of always starting with the host
     1. Alternatively, let the host pick the starting player
-1. Add "Play Again?" button at the end so you don't have to create a new room if you want to start over with the sam eplayers
+1. Add "Play Again?" button at the end so you don't have to create a new room if you want to start over with the same players
+1. BUG: You can make up a room code and join it, but you'll just be stuck in an empty waiting room
+1. BUG: When we tried to host from the family PC or from Peter's chromebook, the other of the two was not able to join.  It appeared to put them in another room (see above).
+1. BUG: If I type in another host's room id and press "Host" it opens a new room with the same id.
+    1. Consider removing the ability for the Host to choose their own room code.
