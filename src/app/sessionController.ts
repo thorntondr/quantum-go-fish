@@ -79,11 +79,12 @@ function validateSnapshot(snapshot: SessionSnapshot): string | undefined {
 export function createHostSession(
   config: RoomConfig,
   uiHooks: Partial<SessionUiHooks>,
-  deps: SessionDeps
+  deps: SessionDeps & { displayName: string }
 ): HostSession {
   const hooks = { ...defaultHooks(), ...uiHooks };
   const clientId = deps.clientId ?? makeClientId();
   const transport = deps.transport;
+  const hostLabel = deps.displayName.trim() || "Host";
 
   const hostPlayerId = config.setup.players[0];
   const baseState =
@@ -103,7 +104,7 @@ export function createHostSession(
         clientId,
         playerId: hostPlayerId,
         status: "open",
-        label: "Host"
+        label: hostLabel
       }
     ]
   ]);

@@ -48,6 +48,7 @@ let hostSession: HostSession | undefined;
 let peerSession: PeerSession | undefined;
 let hostTransport: HostPeerJsTransport | undefined;
 let peerTransport: PeerPeerJsTransport | undefined;
+let playerLabelById = new Map<string, string>();
 
 function byId(id: string): HTMLElement {
   const node = document.getElementById(id);
@@ -83,6 +84,30 @@ function setMoveError(message: string): void {
 function clearErrors(): void {
   setSessionError("");
   setMoveError("");
+}
+
+function updatePlayerLabels(connections: ConnectionState[]): void {
+  const baseLabels = new Map<string, string>();
+  const counts = new Map<string, number>();
+
+  for (const connection of connections) {
+    if (!connection.playerId) {
+      continue;
+    }
+    const label = connection.label || connection.peerId || connection.playerId;
+    baseLabels.set(connection.playerId, label);
+    counts.set(label, (counts.get(label) ?? 0) + 1);
+  }
+
+  playerLabelById = new Map();
+  for (const [playerId, label] of baseLabels.entries()) {
+    const count = counts.get(label) ?? 0;
+    playerLabelById.set(playerId, count > 1 ? `${label} (${playerId})` : label);
+  }
+}
+
+function formatPlayer(playerId: string): string {
+  return playerLabelById.get(playerId) ?? playerId;
 }
 
 function playerLabel(index: number): string {
@@ -188,7 +213,7 @@ function renderLegalMoves(current: GameState): void {
     const p = current.turnState.pendingAsk;
     const answers = legalAnswerMoves(current);
     legalMoves.textContent = [
-      `Pending ask: ${p.asker} -> ${p.target} for ${p.suit}`,
+      `Pending ask: ${formatPlayer(p.asker)} -> ${formatPlayer(p.target)} for ${p.suit}`,
       `yes: ${answers.yes ? "legal" : "illegal"}`,
       `no:  ${answers.no ? "legal" : "illegal"}`
     ].join("\n");
@@ -199,7 +224,7 @@ function renderLegalMoves(current: GameState): void {
     legalMoves.textContent = "No legal asks.";
     return;
   }
-  legalMoves.textContent = asks.map((m) => `ask ${m.target} ${m.suit}`).join("\n");
+  legalMoves.textContent = asks.map((m) => `ask ${formatPlayer(m.target)} ${m.suit}`).join("\n");
 }
 
 function canAsk(current: GameState): boolean {
@@ -235,7 +260,9 @@ function refreshControls(current: GameState): void {
   const targets = [...new Set(askMoves.map((m) => m.target))];
   const selectedTarget =
     targets.includes(askTarget.value) && askTarget.value ? askTarget.value : (targets[0] ?? "");
-  askTarget.innerHTML = targets.map((target) => `<option value="${target}">${target}</option>`).join("");
+  askTarget.innerHTML = targets
+    .map((target) => `<option value="${target}">${formatPlayer(target)}</option>`)
+    .join("");
   askTarget.value = selectedTarget;
 
   const suits = askMoves.filter((m) => m.target === selectedTarget).map((m) => m.suit);
@@ -260,6 +287,7 @@ function refreshControls(current: GameState): void {
 }
 
 function renderRoster(connections: ConnectionState[]): void {
+  updatePlayerLabels(connections);
   if (rosterRoot) {
     if (connections.length === 0) {
       rosterRoot.textContent = "No connections.";
@@ -279,14 +307,15 @@ function renderRoster(connections: ConnectionState[]): void {
     for (const player of openPlayers) {
       const item = document.createElement("li");
       item.className = "roster-item";
-      item.textContent = player.label || player.peerId;
+      item.textContent = player.playerId ? formatPlayer(player.playerId) : (player.label || player.peerId);
       waitingRoster.appendChild(item);
     }
   }
+  render();
 }
 
 function render(): void {
-  renderState({ stateRoot, statusRoot }, state);
+  renderState({ stateRoot, statusRoot }, state, formatPlayer);
   renderLegalMoves(state);
   refreshControls(state);
 }
@@ -303,7 +332,7 @@ function sessionHooks() {
     },
     onAssignedPlayer: (playerId: string | undefined) => {
       assignedPlayer = playerId;
-      appendLog(`Assigned local player: ${playerId ?? "(none)"}`);
+      appendLog(`Assigned local player: ${playerId ? formatPlayer(playerId) : "(none)"}`);
       render();
     },
     onGameStarted: (started: boolean) => {
@@ -412,7 +441,7 @@ async function initSession(options: {
       setWaitingRoomCode(id);
       appendLog(`Host code ready: ${id}`);
     });
-    hostSession = createHostSession(roomConfig, sessionHooks(), { transport: hostTransport });
+    hostSession = createHostSession(roomConfig, sessionHooks(), { transport: hostTransport, displayName });
     appendLog("Host session initialized (PeerJS Cloud).");
   } else {
     peerTransport = new PeerPeerJsTransport(hostCode, localPeerId);

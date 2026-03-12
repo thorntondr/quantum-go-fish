@@ -10,7 +10,10 @@ function cellContent(min: number, max: number): string {
   return `<span class=\"guaranteed\">${guaranteed}</span>${ghostMarks}`;
 }
 
-export function renderPaperclipTable(state: GameState): string {
+export function renderPaperclipTable(
+  state: GameState,
+  formatPlayer: (playerId: string) => string = (playerId) => playerId
+): string {
   let html = "<table><thead><tr><th>Player</th>";
   for (const suit of state.suits) {
     html += `<th>${suit}</th>`;
@@ -18,7 +21,7 @@ export function renderPaperclipTable(state: GameState): string {
   html += "<th>Hand</th></tr></thead><tbody>";
 
   for (const player of state.players) {
-    html += `<tr><td>${player}</td>`;
+    html += `<tr><td>${formatPlayer(player)}</td>`;
     for (const suit of state.suits) {
       html += `<td>${cellContent(state.min[player][suit], state.max[player][suit])}</td>`;
     }

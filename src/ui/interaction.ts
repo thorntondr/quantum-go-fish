@@ -17,14 +17,19 @@ function formatWinReason(reason?: string): string {
   return "unknown";
 }
 
-export function renderState(bindings: UiBindings, state: GameState): void {
-  bindings.stateRoot.innerHTML = renderPaperclipTable(state);
+export function renderState(
+  bindings: UiBindings,
+  state: GameState,
+  formatPlayer: (playerId: string) => string = (playerId) => playerId
+): void {
+  bindings.stateRoot.innerHTML = renderPaperclipTable(state, formatPlayer);
   if (state.turnState.phase === "GameOver" && state.turnState.winner) {
     bindings.statusRoot.textContent =
-      `Game Over. Winner: ${state.turnState.winner} (${formatWinReason(state.turnState.winReason)})`;
+      `Game Over. Winner: ${formatPlayer(state.turnState.winner)} (${formatWinReason(state.turnState.winReason)})`;
     return;
   }
-  bindings.statusRoot.textContent = `Turn: ${state.turnState.currentPlayer} (${state.turnState.phase})`;
+  bindings.statusRoot.textContent =
+    `Turn: ${formatPlayer(state.turnState.currentPlayer)} (${state.turnState.phase})`;
 }
 
 export function submitMove(state: GameState, move: Move): GameState {

@@ -138,7 +138,8 @@ test("Host session accepts legal move_request and broadcasts state_commit", () =
     },
     {
       transport,
-      clientId: "host-client"
+      clientId: "host-client",
+      displayName: "Host"
     }
   );
 
@@ -175,7 +176,8 @@ test("Host session rejects illegal move_request without mutating state", () => {
     {},
     {
       transport,
-      clientId: "host-client"
+      clientId: "host-client",
+      displayName: "Host"
     }
   );
 
@@ -268,7 +270,8 @@ test("Host session supports starting with 13 connected players", () => {
     },
     {
       transport,
-      clientId: "host-client"
+      clientId: "host-client",
+      displayName: "Host"
     }
   );
 
