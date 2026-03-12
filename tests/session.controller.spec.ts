@@ -128,45 +128,55 @@ function setupConfigN(count: number): SetupConfig {
 }
 
 test("Host session accepts legal move_request and broadcasts state_commit", () => {
-  const transport = new MockHostTransport();
-  const errors: string[] = [];
-  const host = createHostSession(
-    { setup: setupConfig2() },
-    {
-      onMoveError: (m) => errors.push(m),
-      onSessionError: (m) => errors.push(m)
-    },
-    {
-      transport,
-      clientId: "host-client",
-      displayName: "Host"
-    }
-  );
+  const originalRandom = Math.random;
+  Math.random = () => 0.9;
 
-  transport.emitPeerState("peer-1", "open");
-  transport.emitFrom(
-    "peer-1",
-    buildMessage("peer-client", "hello", {
-      displayName: "Remote"
-    })
-  );
-  host.startGame();
+  try {
+    const transport = new MockHostTransport();
+    const errors: string[] = [];
+    const host = createHostSession(
+      { setup: setupConfig2() },
+      {
+        onMoveError: (m) => errors.push(m),
+        onSessionError: (m) => errors.push(m)
+      },
+      {
+        transport,
+        clientId: "host-client",
+        displayName: "Host"
+      }
+    );
 
-  host.submitMove({ kind: "Ask", asker: "A", target: "B", suit: "S" });
-  transport.emitFrom(
-    "peer-1",
-    buildMessage("peer-client", "move_request", {
-      move: { kind: "AnswerNo", target: "B", suit: "S" },
-      knownSeq: host.getSnapshot().sessionSeq,
-      knownHash: host.getSnapshot().stateHash
-    })
-  );
+    transport.emitPeerState("peer-1", "open");
+    transport.emitFrom(
+      "peer-1",
+      buildMessage("peer-client", "hello", {
+        displayName: "Remote"
+      })
+    );
+    host.startGame();
 
-  assert.equal(errors.length, 0);
-  assert.equal(host.getSnapshot().sessionSeq, 2);
-  const outbound = transport.messagesFor("peer-1");
-  const hasCommit = outbound.some((m) => m.kind === "state_commit" && m.snapshot.sessionSeq === 2);
-  assert.equal(hasCommit, true);
+    const snapshot = host.getSnapshot().state;
+    const asker = snapshot.turnState.currentPlayer;
+    const target = snapshot.players.find((player) => player !== asker) ?? snapshot.players[0];
+    const suit = snapshot.suits[0];
+    transport.emitFrom(
+      "peer-1",
+      buildMessage("peer-client", "move_request", {
+        move: { kind: "Ask", asker, target, suit },
+        knownSeq: host.getSnapshot().sessionSeq,
+        knownHash: host.getSnapshot().stateHash
+      })
+    );
+
+    assert.equal(errors.length, 0);
+    assert.equal(host.getSnapshot().sessionSeq, 1);
+    const outbound = transport.messagesFor("peer-1");
+    const hasCommit = outbound.some((m) => m.kind === "state_commit" && m.snapshot.sessionSeq === 1);
+    assert.equal(hasCommit, true);
+  } finally {
+    Math.random = originalRandom;
+  }
 });
 
 test("Host session rejects illegal move_request without mutating state", () => {
@@ -187,11 +197,17 @@ test("Host session rejects illegal move_request without mutating state", () => {
 
   const beforeSeq = host.getSnapshot().sessionSeq;
   const beforeHash = host.getSnapshot().stateHash;
+  const snapshot = host.getSnapshot().state;
+  const currentPlayer = snapshot.turnState.currentPlayer;
+  const illegalAsker = snapshot.players.find((player) => player !== currentPlayer);
+  assert.ok(illegalAsker, "Expected a second player to build an illegal ask.");
+  const target = currentPlayer;
+  const suit = snapshot.suits[0];
 
   transport.emitFrom(
     "peer-1",
     buildMessage("peer-client", "move_request", {
-      move: { kind: "Ask", asker: "B", target: "A", suit: "S" },
+      move: { kind: "Ask", asker: illegalAsker, target, suit },
       knownSeq: beforeSeq,
       knownHash: beforeHash
     })

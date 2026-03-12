@@ -125,6 +125,15 @@ export function createHostSession(
   }
 
   function buildSetupForPlayers(template: SetupConfig, players: string[]): SetupConfig {
+    const startingPlayer = players[0];
+    return buildSetupWithStartingPlayer(template, players, startingPlayer);
+  }
+
+  function buildSetupWithStartingPlayer(
+    template: SetupConfig,
+    players: string[],
+    startingPlayer: string
+  ): SetupConfig {
     const suits = template.suits.slice(0, players.length);
     const suitTotals: Record<string, number> = {};
     const handSizes: Record<string, number> = {};
@@ -141,9 +150,14 @@ export function createHostSession(
       suits,
       suitTotals,
       handSizes,
-      startingPlayer: players[0],
+      startingPlayer,
       version: template.version
     };
+  }
+
+  function randomStartingPlayer(players: string[]): string {
+    const index = Math.floor(Math.random() * players.length);
+    return players[index] ?? players[0];
   }
 
   function refreshSnapshotForRoster(reason: string): void {
@@ -155,7 +169,11 @@ export function createHostSession(
       return;
     }
     sessionSeq = 0;
-    snapshot = snapshotFromState(createInitialState(buildSetupForPlayers(config.setup, players)), sessionSeq);
+    const startingPlayer = reason === "start_game" ? randomStartingPlayer(players) : players[0];
+    snapshot = snapshotFromState(
+      createInitialState(buildSetupWithStartingPlayer(config.setup, players, startingPlayer)),
+      sessionSeq
+    );
     hooks.onSnapshot(snapshot);
     hooks.onLog(`Updated pregame setup for ${players.length} player(s) (${reason}).`);
   }
