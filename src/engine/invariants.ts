@@ -1,6 +1,12 @@
 import type { GameState } from "./types.js";
 
 export function assertInvariants(state: GameState): void {
+  for (const inactive of state.inactivePlayers) {
+    if (!state.players.includes(inactive)) {
+      throw new Error(`Invariant violated: inactive player ${inactive} is not in players list.`);
+    }
+  }
+
   for (const player of state.players) {
     let minSum = 0;
     let maxSum = 0;

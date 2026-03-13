@@ -14,7 +14,7 @@ export type TurnPhase =
   | "NextTurn"
   | "GameOver";
 
-export type WinReason = "GuaranteedFourOfSuit" | "AllCardsKnown";
+export type WinReason = "GuaranteedFourOfSuit" | "AllCardsKnown" | "NotEnoughPlayers";
 
 export interface PendingAsk {
   asker: PlayerId;
@@ -37,6 +37,7 @@ export interface GameState {
   handSizes: Record<PlayerId, number>;
   min: BoundsMatrix;
   max: BoundsMatrix;
+  inactivePlayers: PlayerId[];
   turnState: TurnState;
   version: number;
 }

@@ -1,7 +1,7 @@
 import type { GameState, Move, PlayerId, SetupConfig, SuitId } from "../engine/types.js";
 
 export type SessionRole = "host" | "peer";
-export type ConnectionStatus = "new" | "connecting" | "open" | "closed" | "error";
+export type ConnectionStatus = "new" | "connecting" | "open" | "closed" | "error" | "reserved" | "inactive";
 export type PeerId = string;
 export type ClientId = string;
 
@@ -40,6 +40,7 @@ interface BaseSessionMessage {
     | "peer_joined"
     | "peer_left"
     | "suit_named"
+    | "leave_game"
     | "ping"
     | "pong";
 }
@@ -66,6 +67,9 @@ export type SessionMessage =
       kind: "suit_named";
       suitId: SuitId;
       name: string;
+    })
+  | (BaseSessionMessage & {
+      kind: "leave_game";
     })
   | (BaseSessionMessage & {
       kind: "move_request";

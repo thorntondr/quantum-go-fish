@@ -9,6 +9,10 @@ function isKnownSuit(state: GameState, suit: string): boolean {
   return state.suits.includes(suit);
 }
 
+function isInactive(state: GameState, player: string): boolean {
+  return state.inactivePlayers.includes(player);
+}
+
 export function isLegalMove(state: GameState, move: Move): LegalResult {
   if (state.turnState.phase === "GameOver" || state.turnState.winner) {
     return { ok: false, reason: "Game is already over." };
@@ -17,6 +21,9 @@ export function isLegalMove(state: GameState, move: Move): LegalResult {
   if (move.kind === "Ask") {
     if (!isKnownPlayer(state, move.asker) || !isKnownPlayer(state, move.target)) {
       return { ok: false, reason: "Unknown player in Ask move." };
+    }
+    if (isInactive(state, move.asker) || isInactive(state, move.target)) {
+      return { ok: false, reason: "Ask illegal: inactive players may not ask or be asked." };
     }
     if (move.asker === move.target) {
       return { ok: false, reason: "Player cannot ask themselves." };
@@ -46,6 +53,9 @@ export function isLegalMove(state: GameState, move: Move): LegalResult {
   }
   if (move.suit !== pending.suit) {
     return { ok: false, reason: "Answer move suit does not match pending ask suit." };
+  }
+  if (isInactive(state, move.target)) {
+    return { ok: false, reason: "Answer illegal: inactive player may not answer." };
   }
 
   if (move.kind === "AnswerYes") {

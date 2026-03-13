@@ -55,6 +55,7 @@ export function createInitialState(config: SetupConfig): GameState {
     handSizes: { ...config.handSizes },
     min: buildMatrix(config.players, config.suits, () => 0),
     max: buildMatrix(config.players, config.suits, (suit) => config.suitTotals[suit]),
+    inactivePlayers: [],
     turnState: {
       phase: "Idle",
       currentPlayer: config.startingPlayer
@@ -71,6 +72,7 @@ export function cloneState(state: GameState): GameState {
     handSizes: { ...state.handSizes },
     min: deepCloneMatrix(state.min, state.players, state.suits),
     max: deepCloneMatrix(state.max, state.players, state.suits),
+    inactivePlayers: [...state.inactivePlayers],
     turnState: {
       phase: state.turnState.phase,
       currentPlayer: state.turnState.currentPlayer,

@@ -40,6 +40,9 @@ function formatWinReason(reason?: string): string {
   if (reason === "AllCardsKnown") {
     return "all card suits known";
   }
+  if (reason === "NotEnoughPlayers") {
+    return "not enough active players";
+  }
   return "unknown";
 }
 

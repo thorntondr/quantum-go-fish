@@ -5,10 +5,20 @@ import { cloneState } from "./state.js";
 import type { GameState, Move } from "./types.js";
 import type { WinReason } from "./types.js";
 
+function activePlayers(state: GameState): string[] {
+  return state.players.filter((player) => !state.inactivePlayers.includes(player));
+}
+
 function nextPlayer(state: GameState, current: string): string {
-  const idx = state.players.indexOf(current);
-  const next = (idx + 1) % state.players.length;
-  return state.players[next];
+  const players = state.players;
+  const idx = players.indexOf(current);
+  for (let i = 1; i <= players.length; i += 1) {
+    const candidate = players[(idx + i) % players.length];
+    if (!state.inactivePlayers.includes(candidate)) {
+      return candidate;
+    }
+  }
+  return current;
 }
 
 function turnOrderFrom(state: GameState, startPlayer: string): string[] {
@@ -20,7 +30,9 @@ function turnOrderFrom(state: GameState, startPlayer: string): string[] {
 }
 
 function detectGuaranteedSetWinner(state: GameState, startPlayer: string): string | undefined {
-  const ordered = turnOrderFrom(state, startPlayer);
+  const ordered = turnOrderFrom(state, startPlayer).filter(
+    (player) => !state.inactivePlayers.includes(player)
+  );
   for (const player of ordered) {
     const hasFourOfSuit = state.suits.some((suit) => state.min[player][suit] >= 4);
     if (hasFourOfSuit) {
@@ -31,12 +43,17 @@ function detectGuaranteedSetWinner(state: GameState, startPlayer: string): strin
 }
 
 function detectWin(state: GameState, startPlayer: string): { winner: string; reason: WinReason } | undefined {
+  if (activePlayers(state).length < 2) {
+    const winner = activePlayers(state)[0] ?? startPlayer;
+    return { winner, reason: "NotEnoughPlayers" };
+  }
+
   const guaranteedWinner = detectGuaranteedSetWinner(state, startPlayer);
   if (guaranteedWinner) {
     return { winner: guaranteedWinner, reason: "GuaranteedFourOfSuit" };
   }
 
-  const allCardsKnown = state.players.every((player) =>
+  const allCardsKnown = activePlayers(state).every((player) =>
     state.suits.every((suit) => state.min[player][suit] === state.max[player][suit])
   );
   if (allCardsKnown) {

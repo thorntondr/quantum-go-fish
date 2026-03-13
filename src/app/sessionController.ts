@@ -1,5 +1,5 @@
 import { applyMove } from "../engine/moves.js";
-import { createInitialState } from "../engine/state.js";
+import { createInitialState, cloneState } from "../engine/state.js";
 import type { GameState, Move, SetupConfig } from "../engine/types.js";
 import { isLegalMove } from "../engine/rules.js";
 import { stateHash } from "./hash.js";
@@ -21,6 +21,10 @@ interface SessionDeps {
   transport: SessionTransport;
   clientId?: ClientId;
   initialState?: GameState;
+  sessionSeq?: number;
+  started?: boolean;
+  suitNames?: Record<string, string>;
+  seatClaims?: SeatClaim[];
 }
 
 export interface HostSession {
@@ -32,15 +36,27 @@ export interface HostSession {
   close: () => void;
   getSnapshot: () => SessionSnapshot;
   getConnections: () => ConnectionState[];
+  getClientId: () => ClientId;
+  getSuitNames: () => Record<string, string>;
+  getSeatClaims: () => SeatClaim[];
 }
 
 export interface PeerSession {
   submitMove: (move: Move) => void;
   requestSync: () => void;
   setSuitName: (suitId: string, name: string) => void;
+  leaveGame: () => void;
   close: () => void;
   getSnapshot: () => SessionSnapshot | undefined;
   getConnections: () => ConnectionState[];
+  getClientId: () => ClientId;
+}
+
+interface SeatClaim {
+  clientId: ClientId;
+  playerId: string;
+  expiresAt: number;
+  label: string;
 }
 
 function defaultHooks(): SessionUiHooks {
@@ -80,6 +96,8 @@ function validateSnapshot(snapshot: SessionSnapshot): string | undefined {
   return undefined;
 }
 
+const RECONNECT_WINDOW_MS = 2 * 60 * 1000;
+
 export function createHostSession(
   config: RoomConfig,
   uiHooks: Partial<SessionUiHooks>,
@@ -96,10 +114,10 @@ export function createHostSession(
     createInitialState(
       buildSetupForPlayers(config.setup, [hostPlayerId])
     );
-  let sessionSeq = 0;
+  let sessionSeq = deps.sessionSeq ?? 0;
   let snapshot = snapshotFromState(baseState, sessionSeq);
-  let started = false;
-  const suitNames: Record<string, string> = {};
+  let started = deps.started ?? false;
+  const suitNames: Record<string, string> = { ...(deps.suitNames ?? {}) };
 
   const connections = new Map<PeerId, ConnectionState>([
     [
@@ -115,6 +133,9 @@ export function createHostSession(
   ]);
   const peerByClient = new Map<ClientId, PeerId>();
   const assignedByPeer = new Map<PeerId, string>();
+  const seatClaims = new Map<ClientId, SeatClaim>(
+    deps.seatClaims?.map((claim) => [claim.clientId, claim]) ?? []
+  );
 
   function activeAssignedPlayers(): string[] {
     const active = new Set<string>([hostPlayerId]);
@@ -122,11 +143,17 @@ export function createHostSession(
       if (row.peerId === "self") {
         continue;
       }
-      if (row.status === "open" && row.playerId) {
+      if ((row.status === "open" || row.status === "reserved") && row.playerId) {
         active.add(row.playerId);
       }
     }
-    return config.setup.players.filter((playerId) => active.has(playerId));
+    for (const claim of seatClaims.values()) {
+      if (claim.expiresAt > Date.now()) {
+        active.add(claim.playerId);
+      }
+    }
+    const inactive = new Set(snapshot.state.inactivePlayers);
+    return config.setup.players.filter((playerId) => active.has(playerId) && !inactive.has(playerId));
   }
 
   function buildSetupForPlayers(template: SetupConfig, players: string[]): SetupConfig {
@@ -201,6 +228,7 @@ export function createHostSession(
         delete suitNames[key];
       }
       emitSuitNames();
+      seatClaims.clear();
     }
     started = true;
     hooks.onGameStarted(true);
@@ -235,6 +263,69 @@ export function createHostSession(
     suitNames[suitId] = trimmed;
     emitSuitNames();
     return { applied: true, name: trimmed };
+  }
+
+  function updateSnapshot(nextState: GameState, reason: string, broadcast = true): void {
+    sessionSeq += 1;
+    snapshot = snapshotFromState(nextState, sessionSeq);
+    hooks.onSnapshot(snapshot);
+    hooks.onLog(reason);
+    if (broadcast) {
+      transport.broadcast(buildMessage(clientId, "sync_response", { snapshot, reason }));
+    }
+  }
+
+  function markInactive(playerId: string, reason: string): void {
+    if (snapshot.state.inactivePlayers.includes(playerId)) {
+      return;
+    }
+    const next = cloneState(snapshot.state);
+    next.inactivePlayers.push(playerId);
+    const pending = next.turnState.pendingAsk;
+    const isInactive = (id: string) => next.inactivePlayers.includes(id);
+    const nextActivePlayer = (from: string) => {
+      const players = next.players;
+      const startIndex = players.indexOf(from);
+      for (let i = 1; i <= players.length; i += 1) {
+        const candidate = players[(startIndex + i) % players.length];
+        if (!isInactive(candidate)) {
+          return candidate;
+        }
+      }
+      return from;
+    };
+    if (pending && (pending.asker === playerId || pending.target === playerId)) {
+      next.turnState.pendingAsk = undefined;
+      next.turnState.phase = "Idle";
+      next.turnState.currentPlayer = nextActivePlayer(pending.asker);
+    } else if (next.turnState.currentPlayer === playerId) {
+      next.turnState.currentPlayer = nextActivePlayer(playerId);
+    }
+    updateSnapshot(next, reason);
+  }
+
+  function cleanupExpiredClaims(): void {
+    const now = Date.now();
+    const affectedPeers = new Set<PeerId>();
+    for (const [clientKey, claim] of seatClaims.entries()) {
+      if (claim.expiresAt > now) {
+        continue;
+      }
+      seatClaims.delete(clientKey);
+      markInactive(claim.playerId, `Seat claim expired for ${claim.playerId}.`);
+      for (const [peerId, connection] of connections.entries()) {
+        if (connection.playerId === claim.playerId) {
+          connections.set(peerId, { ...connection, status: "inactive" });
+          affectedPeers.add(peerId);
+        }
+      }
+    }
+    if (affectedPeers.size > 0) {
+      updateConnections();
+      for (const peerId of affectedPeers) {
+        broadcastRosterLeft(peerId);
+      }
+    }
   }
 
   function broadcastRosterJoined(peer: ConnectionState): void {
@@ -288,6 +379,7 @@ export function createHostSession(
   }
 
   transport.onPeerState((peerId, status) => {
+    cleanupExpiredClaims();
     if (peerId === "self") {
       return;
     }
@@ -300,19 +392,38 @@ export function createHostSession(
       label: existing?.label ?? peerId
     };
     connections.set(peerId, next);
-    updateConnections();
-
-    if ((status === "closed" || status === "error") && existing?.clientId) {
-      assignedByPeer.delete(peerId);
-      peerByClient.delete(existing.clientId);
+    if (status === "closed" || status === "error") {
+      if (existing?.clientId && existing.playerId && !snapshot.state.inactivePlayers.includes(existing.playerId)) {
+        seatClaims.set(existing.clientId, {
+          clientId: existing.clientId,
+          playerId: existing.playerId,
+          expiresAt: Date.now() + RECONNECT_WINDOW_MS,
+          label: existing.label ?? existing.clientId
+        });
+        connections.set(peerId, { ...next, status: "reserved" });
+      }
+      if (existing?.clientId) {
+        assignedByPeer.delete(peerId);
+        peerByClient.delete(existing.clientId);
+      }
+      updateConnections();
       broadcastRosterLeft(peerId);
-      refreshSnapshotForRoster("peer_left");
+      if (!started) {
+        refreshSnapshotForRoster("peer_left");
+      }
+      return;
     }
+    updateConnections();
   });
 
   transport.onMessage((fromPeerId, message) => {
+    cleanupExpiredClaims();
     if (message.kind === "hello") {
-      const assignedPlayerId = assignedByPeer.get(fromPeerId) ?? nextAssignablePlayer();
+      const claim = seatClaims.get(message.fromClientId);
+      const assignedPlayerId =
+        (claim && claim.expiresAt > Date.now() && !snapshot.state.inactivePlayers.includes(claim.playerId)
+          ? claim.playerId
+          : undefined) ?? assignedByPeer.get(fromPeerId) ?? nextAssignablePlayer();
       const current = connections.get(fromPeerId) ?? {
         peerId: fromPeerId,
         status: "new",
@@ -326,6 +437,9 @@ export function createHostSession(
       };
       connections.set(fromPeerId, updated);
       peerByClient.set(message.fromClientId, fromPeerId);
+      if (claim) {
+        seatClaims.delete(message.fromClientId);
+      }
       if (assignedPlayerId) {
         assignedByPeer.set(fromPeerId, assignedPlayerId);
       } else {
@@ -344,6 +458,16 @@ export function createHostSession(
           suitNames: { ...suitNames }
         })
       );
+      if (started) {
+        transport.send(
+          fromPeerId,
+          buildMessage(clientId, "start_game", {
+            snapshot,
+            roster: rosterFromMap(connections),
+            suitNames: { ...suitNames }
+          })
+        );
+      }
       broadcastRosterJoined(updated);
       hooks.onLog(`Peer hello accepted from ${updated.label} (${fromPeerId}).`);
       return;
@@ -369,6 +493,17 @@ export function createHostSession(
             name: outcome.name
           })
         );
+      }
+      return;
+    }
+
+    if (message.kind === "leave_game") {
+      const connection = connections.get(fromPeerId);
+      if (connection?.playerId) {
+        markInactive(connection.playerId, `Player ${connection.playerId} left the game.`);
+        connections.set(fromPeerId, { ...connection, status: "inactive" });
+        updateConnections();
+        broadcastRosterLeft(fromPeerId);
       }
       return;
     }
@@ -454,6 +589,7 @@ export function createHostSession(
   hooks.onSnapshot(snapshot);
   updateConnections();
   emitSuitNames();
+  hooks.onGameStarted(started);
 
   return {
     submitMove(move: Move): void {
@@ -499,6 +635,15 @@ export function createHostSession(
     },
     getConnections(): ConnectionState[] {
       return rosterFromMap(connections);
+    },
+    getClientId(): ClientId {
+      return clientId;
+    },
+    getSuitNames(): Record<string, string> {
+      return { ...suitNames };
+    },
+    getSeatClaims(): SeatClaim[] {
+      return [...seatClaims.values()].map((claim) => ({ ...claim }));
     }
   };
 }
@@ -716,6 +861,12 @@ export function createPeerSession(
         })
       );
     },
+    leaveGame(): void {
+      transport.send("host", buildMessage(clientId, "leave_game", {}));
+      started = false;
+      hooks.onGameStarted(false);
+      transport.close();
+    },
     close(): void {
       started = false;
       hooks.onGameStarted(false);
@@ -726,6 +877,9 @@ export function createPeerSession(
     },
     getConnections(): ConnectionState[] {
       return rosterFromMap(connections);
+    },
+    getClientId(): ClientId {
+      return clientId;
     }
   };
 }

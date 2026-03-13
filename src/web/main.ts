@@ -9,6 +9,7 @@ import { renderState } from "../ui/interaction.js";
 
 const stateRoot = requireEl("state");
 const statusRoot = requireEl("status");
+const pauseNotice = getEl("pauseNotice");
 const sessionErrorRoot = requireEl("sessionError");
 const moveErrorRoot = requireEl("moveError");
 const legalMoves = requireEl("legalMoves");
@@ -42,6 +43,7 @@ const askSuit = requireEl("askSuit") as HTMLSelectElement;
 const askBtn = requireEl("askBtn") as HTMLButtonElement;
 const yesBtn = requireEl("yesBtn") as HTMLButtonElement;
 const noBtn = requireEl("noBtn") as HTMLButtonElement;
+const leaveGameBtn = getEl("leaveGameBtn") as HTMLButtonElement | null;
 
 const MAX_PLAYERS = 13;
 let state = createInitialState(buildConfig(1));
@@ -53,6 +55,10 @@ let hostTransport: HostPeerJsTransport | undefined;
 let peerTransport: PeerPeerJsTransport | undefined;
 let playerLabelById = new Map<string, string>();
 let suitLabelById = new Map<string, string>();
+let playerStatusById = new Map<string, string>();
+let currentRoomCode = "";
+
+const STORAGE_KEY = "qgf-session-v1";
 
 function byId(id: string): HTMLElement {
   const node = document.getElementById(id);
@@ -143,6 +149,66 @@ function maybePromptForSuitName(suitId: string): void {
   }
 }
 
+function loadStoredSession(): Record<string, unknown> | undefined {
+  if (typeof localStorage === "undefined") {
+    return undefined;
+  }
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // ignore
+  }
+  return undefined;
+}
+
+function saveStoredSession(data: Record<string, unknown>): void {
+  if (typeof localStorage === "undefined") {
+    return;
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function clearStoredSession(): void {
+  if (typeof localStorage === "undefined") {
+    return;
+  }
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+function persistSession(): void {
+  if (!hostSession && !peerSession) {
+    return;
+  }
+  const role = hostSession ? "host" : "peer";
+  const clientId = hostSession ? hostSession.getClientId() : peerSession?.getClientId();
+  const displayName = friendlyNameInput?.value.trim() || "Player";
+  const hostCode = currentRoomCode || roomCodeInput?.value.trim() || hostCodeInput?.value.trim() || "";
+  const payload: Record<string, unknown> = {
+    role,
+    clientId,
+    displayName,
+    hostCode,
+    assignedPlayerId: assignedPlayer,
+    lastSeen: Date.now(),
+    started: gameStarted
+  };
+  if (hostSession) {
+    const snapshot = hostSession.getSnapshot();
+    payload.snapshot = snapshot.state;
+    payload.sessionSeq = snapshot.sessionSeq;
+    payload.suitNames = hostSession.getSuitNames();
+    payload.seatClaims = hostSession.getSeatClaims();
+  }
+  saveStoredSession(payload);
+}
+
 function playerLabel(index: number): string {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   if (index < alphabet.length) {
@@ -201,8 +267,14 @@ function ensurePeerIdDefaultForRole(): void {
 
 function legalAsks(current: GameState, asker: string): Move[] {
   const moves: Move[] = [];
+  if (current.inactivePlayers.includes(asker)) {
+    return moves;
+  }
   for (const target of current.players) {
     if (target === asker) {
+      continue;
+    }
+    if (current.inactivePlayers.includes(target)) {
       continue;
     }
     for (const suit of current.suits) {
@@ -264,6 +336,9 @@ function canAsk(current: GameState): boolean {
   if (!assignedPlayer || !gameStarted) {
     return false;
   }
+  if (current.inactivePlayers.includes(assignedPlayer)) {
+    return false;
+  }
   if (current.turnState.pendingAsk || current.turnState.phase === "GameOver") {
     return false;
   }
@@ -276,6 +351,9 @@ function canAsk(current: GameState): boolean {
 function canAnswer(current: GameState): { yes: boolean; no: boolean } {
   const pending = current.turnState.pendingAsk;
   if (!assignedPlayer || !gameStarted || !pending) {
+    return { yes: false, no: false };
+  }
+  if (current.inactivePlayers.includes(assignedPlayer)) {
     return { yes: false, no: false };
   }
   if (pending.target !== assignedPlayer) {
@@ -328,8 +406,31 @@ function refreshPlayAgain(current: GameState): void {
   playAgainBtn.disabled = !hostSession;
 }
 
+function refreshPauseNotice(current: GameState): void {
+  if (!pauseNotice) {
+    return;
+  }
+  let notice = "";
+  const currentStatus = playerStatusById.get(current.turnState.currentPlayer);
+  if (currentStatus === "reserved") {
+    notice = `Waiting for ${formatPlayer(current.turnState.currentPlayer)} to reconnect.`;
+  } else if (current.turnState.pendingAsk) {
+    const targetStatus = playerStatusById.get(current.turnState.pendingAsk.target);
+    if (targetStatus === "reserved") {
+      notice = `Waiting for ${formatPlayer(current.turnState.pendingAsk.target)} to answer.`;
+    }
+  }
+  pauseNotice.textContent = notice;
+}
+
 function renderRoster(connections: ConnectionState[]): void {
   updatePlayerLabels(connections);
+  playerStatusById = new Map();
+  for (const connection of connections) {
+    if (connection.playerId) {
+      playerStatusById.set(connection.playerId, connection.status);
+    }
+  }
   if (rosterRoot) {
     if (connections.length === 0) {
       rosterRoot.textContent = "No connections.";
@@ -340,7 +441,7 @@ function renderRoster(connections: ConnectionState[]): void {
     }
   }
   if (waitingRoster) {
-    const openPlayers = connections.filter((c) => c.status === "open");
+    const openPlayers = connections.filter((c) => c.playerId);
     waitingRoster.innerHTML = "";
     if (openPlayers.length === 0) {
       waitingRoster.innerHTML = "<li class=\"roster-item\">No connected players yet.</li>";
@@ -349,10 +450,12 @@ function renderRoster(connections: ConnectionState[]): void {
     for (const player of openPlayers) {
       const item = document.createElement("li");
       item.className = "roster-item";
-      item.textContent = player.playerId ? formatPlayer(player.playerId) : (player.label || player.peerId);
+      const label = player.playerId ? formatPlayer(player.playerId) : (player.label || player.peerId);
+      item.textContent = `${label} (${player.status})`;
       waitingRoster.appendChild(item);
     }
   }
+  persistSession();
   render();
 }
 
@@ -361,6 +464,7 @@ function render(): void {
   renderLegalMoves(state);
   refreshControls(state);
   refreshPlayAgain(state);
+  refreshPauseNotice(state);
 }
 
 function sessionHooks() {
@@ -372,15 +476,18 @@ function sessionHooks() {
     onSnapshot: (snapshot: { state: GameState }) => {
       state = snapshot.state;
       render();
+      persistSession();
     },
     onAssignedPlayer: (playerId: string | undefined) => {
       assignedPlayer = playerId;
       appendLog(`Assigned local player: ${playerId ? formatPlayer(playerId) : "(none)"}`);
       render();
+      persistSession();
     },
     onSuitNamesChanged: (suitNames: Record<string, string>) => {
       updateSuitLabels(suitNames);
       render();
+      persistSession();
     },
     onGameStarted: (started: boolean) => {
       gameStarted = started;
@@ -391,6 +498,7 @@ function sessionHooks() {
         setScreen("waiting");
       }
       render();
+      persistSession();
     }
   };
 }
@@ -412,6 +520,7 @@ function closeSession(): void {
   if (waitingRoster) {
     waitingRoster.innerHTML = "<li class=\"roster-item\">No connected players yet.</li>";
   }
+  currentRoomCode = "";
   if (shareRoomLink) {
     shareRoomLink.value = "";
   }
@@ -440,6 +549,7 @@ function setScreen(target: "landing" | "waiting" | "game"): void {
 }
 
 function setWaitingRoomCode(code: string): void {
+  currentRoomCode = code;
   if (waitingRoomCode) {
     waitingRoomCode.textContent = code;
   }
@@ -466,6 +576,14 @@ async function initSession(options: {
   hostCode: string;
   localPeerId: string;
   displayName: string;
+  resume?: {
+    clientId?: string;
+    snapshot?: GameState;
+    sessionSeq?: number;
+    started?: boolean;
+    suitNames?: Record<string, string>;
+    seatClaims?: Array<{ clientId: string; playerId: string; expiresAt: number; label: string }>;
+  };
 }): Promise<void> {
   clearErrors();
   closeSession();
@@ -502,7 +620,16 @@ async function initSession(options: {
       setWaitingRoomCode(id);
       appendLog(`Host code ready: ${id}`);
     });
-    hostSession = createHostSession(roomConfig, sessionHooks(), { transport: hostTransport, displayName });
+    hostSession = createHostSession(roomConfig, sessionHooks(), {
+      transport: hostTransport,
+      displayName,
+      clientId: options.resume?.clientId,
+      initialState: options.resume?.snapshot,
+      sessionSeq: options.resume?.sessionSeq,
+      started: options.resume?.started,
+      suitNames: options.resume?.suitNames,
+      seatClaims: options.resume?.seatClaims
+    });
     appendLog("Host session initialized (PeerJS Cloud).");
   } else {
     peerTransport = new PeerPeerJsTransport(hostCode, localPeerId);
@@ -512,7 +639,11 @@ async function initSession(options: {
       }
       appendLog(`Peer ID ready: ${id}`);
     });
-    peerSession = createPeerSession(sessionHooks(), { transport: peerTransport, displayName });
+    peerSession = createPeerSession(sessionHooks(), {
+      transport: peerTransport,
+      displayName,
+      clientId: options.resume?.clientId
+    });
     appendLog(`Peer session initialized; connecting to host code ${hostCode}.`);
   }
   setWaitingRoomCode(hostCode);
@@ -617,6 +748,18 @@ if (playAgainBtn) {
   });
 }
 
+if (leaveGameBtn) {
+  leaveGameBtn.addEventListener("click", () => {
+    if (peerSession) {
+      peerSession.leaveGame();
+      clearStoredSession();
+      closeSession();
+      return;
+    }
+    setSessionError("Only non-host players can leave the game.");
+  });
+}
+
 if (requestSyncBtn) {
   requestSyncBtn.addEventListener("click", () => {
     if (hostSession) {
@@ -700,6 +843,41 @@ noBtn.addEventListener("click", () => {
 const roomParam = new URLSearchParams(window.location.search).get("room");
 if (roomParam && roomCodeInput) {
   roomCodeInput.value = roomParam;
+}
+
+const RESUME_WINDOW_MS = 2 * 60 * 1000;
+const storedSession = loadStoredSession();
+if (storedSession) {
+  const lastSeen = Number(storedSession.lastSeen ?? 0);
+  const hostCode = String(storedSession.hostCode ?? "");
+  const displayName = String(storedSession.displayName ?? "Player");
+  const role = storedSession.role === "host" ? "host" : storedSession.role === "peer" ? "peer" : undefined;
+  if (role && hostCode && Date.now() - lastSeen <= RESUME_WINDOW_MS) {
+    if (roomCodeInput && role === "peer") {
+      roomCodeInput.value = hostCode;
+    }
+    void initSession({
+      role,
+      hostCode,
+      localPeerId: role === "host" ? hostCode : randomPeerId(),
+      displayName,
+      resume: {
+        clientId: typeof storedSession.clientId === "string" ? storedSession.clientId : undefined,
+        snapshot: storedSession.snapshot as GameState | undefined,
+        sessionSeq: typeof storedSession.sessionSeq === "number" ? storedSession.sessionSeq : undefined,
+        started: Boolean(storedSession.started),
+        suitNames: storedSession.suitNames as Record<string, string> | undefined,
+        seatClaims: storedSession.seatClaims as Array<{
+          clientId: string;
+          playerId: string;
+          expiresAt: number;
+          label: string;
+        }> | undefined
+      }
+    }).catch((error) => {
+      setSessionError(error instanceof Error ? error.message : String(error));
+    });
+  }
 }
 
 ensurePeerIdDefaultForRole();
