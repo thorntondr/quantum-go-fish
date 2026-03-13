@@ -31,6 +31,8 @@ const joinBtn = getEl("joinBtn") as HTMLButtonElement | null;
 const waitingRoomCode = getEl("waitingRoomCode");
 const waitingRoster = getEl("waitingRoster");
 const waitingStartGameBtn = getEl("waitingStartGameBtn") as HTMLButtonElement | null;
+const shareRoomBtn = getEl("shareRoomBtn") as HTMLButtonElement | null;
+const shareRoomLink = getEl("shareRoomLink") as HTMLInputElement | null;
 const screenLanding = getEl("screenLanding");
 const screenWaiting = getEl("screenWaiting");
 const screenGame = getEl("screenGame");
@@ -410,6 +412,12 @@ function closeSession(): void {
   if (waitingRoster) {
     waitingRoster.innerHTML = "<li class=\"roster-item\">No connected players yet.</li>";
   }
+  if (shareRoomLink) {
+    shareRoomLink.value = "";
+  }
+  if (shareRoomBtn) {
+    shareRoomBtn.disabled = true;
+  }
   setScreen("landing");
 }
 
@@ -434,6 +442,14 @@ function setScreen(target: "landing" | "waiting" | "game"): void {
 function setWaitingRoomCode(code: string): void {
   if (waitingRoomCode) {
     waitingRoomCode.textContent = code;
+  }
+  if (shareRoomLink) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("room", code);
+    shareRoomLink.value = url.toString();
+  }
+  if (shareRoomBtn) {
+    shareRoomBtn.disabled = !code;
   }
 }
 
@@ -617,6 +633,37 @@ if (requestSyncBtn) {
   });
 }
 
+if (shareRoomBtn && shareRoomLink) {
+  shareRoomBtn.addEventListener("click", () => {
+    const link = shareRoomLink.value.trim();
+    if (!link) {
+      setSessionError("Room link is not ready yet.");
+      return;
+    }
+    const nav = typeof navigator === "undefined" ? undefined : navigator;
+    if (nav?.share) {
+      void nav.share({ title: "Quantum Go Fish", text: "Join my room:", url: link }).catch(() => {
+        // User canceled share; no action needed.
+      });
+      return;
+    }
+    if (nav?.clipboard?.writeText) {
+      nav.clipboard
+        .writeText(link)
+        .then(() => appendLog("Room link copied to clipboard."))
+        .catch(() => {
+          shareRoomLink.focus();
+          shareRoomLink.select();
+          setSessionError("Copy failed. Please copy the link manually.");
+        });
+      return;
+    }
+    shareRoomLink.focus();
+    shareRoomLink.select();
+    setSessionError("Sharing unavailable. Please copy the link manually.");
+  });
+}
+
 askBtn.addEventListener("click", () => {
   if (!assignedPlayer) {
     setMoveError("No assigned player.");
@@ -649,6 +696,11 @@ noBtn.addEventListener("click", () => {
   }
   submitMove({ kind: "AnswerNo", target: pending.target, suit: pending.suit });
 });
+
+const roomParam = new URLSearchParams(window.location.search).get("room");
+if (roomParam && roomCodeInput) {
+  roomCodeInput.value = roomParam;
+}
 
 ensurePeerIdDefaultForRole();
 render();

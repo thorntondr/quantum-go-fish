@@ -19,3 +19,4 @@
 1. BUG: When we tried to host from the family PC or from Peter's chromebook, the other of the two was not able to join.  It appeared to put them in another room (see above).
 1. BUG: If I type in another host's room id and press "Host" it opens a new room with the same id.
     1. Consider removing the ability for the Host to choose their own room code.
+1. WIP: Add a share button/link to the waiting room that you can send to friends to join the room
