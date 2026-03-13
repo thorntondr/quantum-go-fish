@@ -26,6 +26,7 @@ interface SessionDeps {
 export interface HostSession {
   submitMove: (move: Move) => void;
   startGame: () => void;
+  restartGame: () => void;
   requestSync: (peerId?: PeerId) => void;
   setSuitName: (suitId: string, name: string) => void;
   close: () => void;
@@ -164,8 +165,8 @@ export function createHostSession(
     return players[index] ?? players[0];
   }
 
-  function refreshSnapshotForRoster(reason: string): void {
-    if (started) {
+  function refreshSnapshotForRoster(reason: string, force = false): void {
+    if (started && !force) {
       return;
     }
     const players = activeAssignedPlayers();
@@ -173,13 +174,45 @@ export function createHostSession(
       return;
     }
     sessionSeq = 0;
-    const startingPlayer = reason === "start_game" ? randomStartingPlayer(players) : players[0];
+    const startingPlayer =
+      reason === "start_game" || reason === "restart_game" ? randomStartingPlayer(players) : players[0];
     snapshot = snapshotFromState(
       createInitialState(buildSetupWithStartingPlayer(config.setup, players, startingPlayer)),
       sessionSeq
     );
     hooks.onSnapshot(snapshot);
     hooks.onLog(`Updated pregame setup for ${players.length} player(s) (${reason}).`);
+  }
+
+  function startGameInternal(reason: "start_game" | "restart_game"): void {
+    const openAssigned = rosterFromMap(connections).filter(
+      (c) => c.peerId !== "self" && c.status === "open" && !!c.playerId
+    );
+    const playerCount = 1 + openAssigned.length;
+    const maxPlayers = config.setup.players.length;
+    if (playerCount < 2 || playerCount > maxPlayers) {
+      hooks.onSessionError(`Player count must be between 2 and ${maxPlayers}.`);
+      return;
+    }
+
+    refreshSnapshotForRoster(reason, true);
+    if (reason === "restart_game") {
+      for (const key of Object.keys(suitNames)) {
+        delete suitNames[key];
+      }
+      emitSuitNames();
+    }
+    started = true;
+    hooks.onGameStarted(true);
+    hooks.onSnapshot(snapshot);
+    hooks.onLog(reason === "restart_game" ? "Game restarted by host." : "Game started by host.");
+    transport.broadcast(
+      buildMessage(clientId, "start_game", {
+        snapshot,
+        roster: rosterFromMap(connections),
+        suitNames: { ...suitNames }
+      })
+    );
   }
 
   function updateConnections(): void {
@@ -432,28 +465,10 @@ export function createHostSession(
       commitMove(move);
     },
     startGame(): void {
-      const openAssigned = rosterFromMap(connections).filter(
-        (c) => c.peerId !== "self" && c.status === "open" && !!c.playerId
-      );
-      const playerCount = 1 + openAssigned.length;
-      const maxPlayers = config.setup.players.length;
-      if (playerCount < 2 || playerCount > maxPlayers) {
-        hooks.onSessionError(`Player count must be between 2 and ${maxPlayers}.`);
-        return;
-      }
-
-      refreshSnapshotForRoster("start_game");
-      started = true;
-      hooks.onGameStarted(true);
-      hooks.onSnapshot(snapshot);
-      hooks.onLog("Game started by host.");
-      transport.broadcast(
-        buildMessage(clientId, "start_game", {
-          snapshot,
-          roster: rosterFromMap(connections),
-          suitNames: { ...suitNames }
-        })
-      );
+      startGameInternal("start_game");
+    },
+    restartGame(): void {
+      startGameInternal("restart_game");
     },
     requestSync(peerId?: PeerId): void {
       if (peerId) {
@@ -559,6 +574,9 @@ export function createPeerSession(
     if (message.kind === "welcome") {
       assignedPlayerId = message.assignedPlayerId || undefined;
       hooks.onAssignedPlayer(assignedPlayerId);
+      for (const key of Object.keys(suitNames)) {
+        delete suitNames[key];
+      }
       Object.assign(suitNames, message.suitNames ?? {});
       emitSuitNames();
       connections.clear();
@@ -574,6 +592,9 @@ export function createPeerSession(
       started = true;
       hooks.onGameStarted(true);
       applySnapshot(message.snapshot, "start_game");
+      for (const key of Object.keys(suitNames)) {
+        delete suitNames[key];
+      }
       Object.assign(suitNames, message.suitNames ?? {});
       emitSuitNames();
       connections.clear();

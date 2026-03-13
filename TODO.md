@@ -15,7 +15,6 @@
     1. Actions for choosing player to ask and suit to ask for need to be more interesting than a drop-down, but still simple and quick.
     1. When I'm choosing who to ask, the currently selected player's hand should be highlighted somehow (larger or outlined or something)
 1. Add an info button that shows full instructions on how to play the game
-1. Add "Play Again?" button at the end so you don't have to create a new room if you want to start over with the same players
 1. BUG: You can make up a room code and join it, but you'll just be stuck in an empty waiting room
 1. BUG: When we tried to host from the family PC or from Peter's chromebook, the other of the two was not able to join.  It appeared to put them in another room (see above).
 1. BUG: If I type in another host's room id and press "Host" it opens a new room with the same id.

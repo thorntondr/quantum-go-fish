@@ -22,6 +22,7 @@ const localPeerIdInput = getEl("localPeerId") as HTMLInputElement | null;
 const initSessionBtn = getEl("initSessionBtn") as HTMLButtonElement | null;
 const startGameBtn = getEl("startGameBtn") as HTMLButtonElement | null;
 const requestSyncBtn = getEl("requestSyncBtn") as HTMLButtonElement | null;
+const playAgainBtn = getEl("playAgainBtn") as HTMLButtonElement | null;
 
 const friendlyNameInput = getEl("friendlyName") as HTMLInputElement | null;
 const hostBtn = getEl("hostBtn") as HTMLButtonElement | null;
@@ -316,6 +317,15 @@ function refreshControls(current: GameState): void {
   }
 }
 
+function refreshPlayAgain(current: GameState): void {
+  if (!playAgainBtn) {
+    return;
+  }
+  const isGameOver = current.turnState.phase === "GameOver";
+  playAgainBtn.style.display = isGameOver ? "inline-flex" : "none";
+  playAgainBtn.disabled = !hostSession;
+}
+
 function renderRoster(connections: ConnectionState[]): void {
   updatePlayerLabels(connections);
   if (rosterRoot) {
@@ -348,6 +358,7 @@ function render(): void {
   renderState({ stateRoot, statusRoot }, state, formatPlayer, formatSuit);
   renderLegalMoves(state);
   refreshControls(state);
+  refreshPlayAgain(state);
 }
 
 function sessionHooks() {
@@ -577,6 +588,16 @@ if (waitingStartGameBtn) {
       return;
     }
     hostSession.startGame();
+  });
+}
+
+if (playAgainBtn) {
+  playAgainBtn.addEventListener("click", () => {
+    if (!hostSession) {
+      setSessionError("Only the host can restart the game.");
+      return;
+    }
+    hostSession.restartGame();
   });
 }
 
