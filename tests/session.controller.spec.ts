@@ -253,13 +253,15 @@ test("Peer session requests sync on commit sequence gap", () => {
     buildMessage("host-client", "welcome", {
       assignedPlayerId: "B",
       roster: [],
-      hostClientId: "host-client"
+      hostClientId: "host-client",
+      suitNames: {}
     })
   );
   transport.emitFromHost(
     buildMessage("host-client", "start_game", {
       snapshot: startSnapshot,
-      roster: []
+      roster: [],
+      suitNames: {}
     })
   );
   transport.emitFromHost(
@@ -306,4 +308,112 @@ test("Host session supports starting with 13 connected players", () => {
 
   assert.equal(errors.length, 0);
   assert.equal(host.getSnapshot().state.players.length, 13);
+});
+
+test("Host session broadcasts suit_named when first named by a peer", () => {
+  const transport = new MockHostTransport();
+  createHostSession(
+    { setup: setupConfig2() },
+    {},
+    {
+      transport,
+      clientId: "host-client",
+      displayName: "Host"
+    }
+  );
+
+  transport.emitPeerState("peer-1", "open");
+  transport.emitPeerState("peer-2", "open");
+  transport.emitFrom("peer-1", buildMessage("peer-client-1", "hello", { displayName: "Peer 1" }));
+  transport.emitFrom("peer-2", buildMessage("peer-client-2", "hello", { displayName: "Peer 2" }));
+
+  transport.emitFrom(
+    "peer-1",
+    buildMessage("peer-client-1", "suit_named", {
+      suitId: "S",
+      name: "Stars"
+    })
+  );
+
+  const peer1Messages = transport.messagesFor("peer-1");
+  const peer2Messages = transport.messagesFor("peer-2");
+  const peer1Named = peer1Messages.some((m) => m.kind === "suit_named" && m.suitId === "S");
+  const peer2Named = peer2Messages.some((m) => m.kind === "suit_named" && m.suitId === "S");
+  assert.equal(peer1Named, true);
+  assert.equal(peer2Named, true);
+});
+
+test("Peer session applies suit names from welcome and suit_named messages", () => {
+  const transport = new MockPeerTransport();
+  const updates: Record<string, string>[] = [];
+  createPeerSession(
+    {
+      onSuitNamesChanged: (names) => updates.push(names)
+    },
+    {
+      transport,
+      clientId: "peer-client",
+      displayName: "Remote"
+    }
+  );
+
+  transport.emitHostState("open");
+  transport.emitFromHost(
+    buildMessage("host-client", "welcome", {
+      assignedPlayerId: "B",
+      roster: [],
+      hostClientId: "host-client",
+      suitNames: { S: "Stars" }
+    })
+  );
+
+  transport.emitFromHost(
+    buildMessage("host-client", "suit_named", {
+      suitId: "H",
+      name: "Hearts"
+    })
+  );
+
+  const latest = updates[updates.length - 1] ?? {};
+  assert.deepEqual(latest, { S: "Stars", H: "Hearts" });
+});
+
+test("Host session ignores attempts to rename an already-named suit", () => {
+  const transport = new MockHostTransport();
+  createHostSession(
+    { setup: setupConfig2() },
+    {},
+    {
+      transport,
+      clientId: "host-client",
+      displayName: "Host"
+    }
+  );
+
+  transport.emitPeerState("peer-1", "open");
+  transport.emitPeerState("peer-2", "open");
+  transport.emitFrom("peer-1", buildMessage("peer-client-1", "hello", { displayName: "Peer 1" }));
+  transport.emitFrom("peer-2", buildMessage("peer-client-2", "hello", { displayName: "Peer 2" }));
+
+  transport.emitFrom(
+    "peer-1",
+    buildMessage("peer-client-1", "suit_named", {
+      suitId: "S",
+      name: "Stars"
+    })
+  );
+  transport.emitFrom(
+    "peer-2",
+    buildMessage("peer-client-2", "suit_named", {
+      suitId: "S",
+      name: "Spades"
+    })
+  );
+
+  const peer2Messages = transport.messagesFor("peer-2");
+  const suitNamed = peer2Messages.filter((m) => m.kind === "suit_named" && m.suitId === "S");
+  assert.equal(suitNamed.length, 2);
+  const last = suitNamed[suitNamed.length - 1];
+  assert.ok(last && last.kind === "suit_named");
+  assert.equal(last.name, "Stars");
 });

@@ -27,6 +27,7 @@ export interface HostSession {
   submitMove: (move: Move) => void;
   startGame: () => void;
   requestSync: (peerId?: PeerId) => void;
+  setSuitName: (suitId: string, name: string) => void;
   close: () => void;
   getSnapshot: () => SessionSnapshot;
   getConnections: () => ConnectionState[];
@@ -35,6 +36,7 @@ export interface HostSession {
 export interface PeerSession {
   submitMove: (move: Move) => void;
   requestSync: () => void;
+  setSuitName: (suitId: string, name: string) => void;
   close: () => void;
   getSnapshot: () => SessionSnapshot | undefined;
   getConnections: () => ConnectionState[];
@@ -48,7 +50,8 @@ function defaultHooks(): SessionUiHooks {
     onConnectionsChanged: () => {},
     onSnapshot: () => {},
     onAssignedPlayer: () => {},
-    onGameStarted: () => {}
+    onGameStarted: () => {},
+    onSuitNamesChanged: () => {}
   };
 }
 
@@ -95,6 +98,7 @@ export function createHostSession(
   let sessionSeq = 0;
   let snapshot = snapshotFromState(baseState, sessionSeq);
   let started = false;
+  const suitNames: Record<string, string> = {};
 
   const connections = new Map<PeerId, ConnectionState>([
     [
@@ -180,6 +184,24 @@ export function createHostSession(
 
   function updateConnections(): void {
     hooks.onConnectionsChanged(rosterFromMap(connections));
+  }
+
+  function emitSuitNames(): void {
+    hooks.onSuitNamesChanged({ ...suitNames });
+  }
+
+  function applySuitName(suitId: string, name: string): { applied: boolean; name: string } | undefined {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return undefined;
+    }
+    const existing = suitNames[suitId];
+    if (existing) {
+      return { applied: false, name: existing };
+    }
+    suitNames[suitId] = trimmed;
+    emitSuitNames();
+    return { applied: true, name: trimmed };
   }
 
   function broadcastRosterJoined(peer: ConnectionState): void {
@@ -285,11 +307,36 @@ export function createHostSession(
         buildMessage(clientId, "welcome", {
           assignedPlayerId,
           roster: rosterFromMap(connections),
-          hostClientId: clientId
+          hostClientId: clientId,
+          suitNames: { ...suitNames }
         })
       );
       broadcastRosterJoined(updated);
       hooks.onLog(`Peer hello accepted from ${updated.label} (${fromPeerId}).`);
+      return;
+    }
+
+    if (message.kind === "suit_named") {
+      const outcome = applySuitName(message.suitId, message.name);
+      if (!outcome) {
+        return;
+      }
+      if (outcome.applied) {
+        transport.broadcast(
+          buildMessage(clientId, "suit_named", {
+            suitId: message.suitId,
+            name: outcome.name
+          })
+        );
+      } else {
+        transport.send(
+          fromPeerId,
+          buildMessage(clientId, "suit_named", {
+            suitId: message.suitId,
+            name: outcome.name
+          })
+        );
+      }
       return;
     }
 
@@ -373,6 +420,7 @@ export function createHostSession(
   hooks.onAssignedPlayer(hostPlayerId);
   hooks.onSnapshot(snapshot);
   updateConnections();
+  emitSuitNames();
 
   return {
     submitMove(move: Move): void {
@@ -402,7 +450,8 @@ export function createHostSession(
       transport.broadcast(
         buildMessage(clientId, "start_game", {
           snapshot,
-          roster: rosterFromMap(connections)
+          roster: rosterFromMap(connections),
+          suitNames: { ...suitNames }
         })
       );
     },
@@ -412,6 +461,18 @@ export function createHostSession(
         return;
       }
       transport.broadcast(buildMessage(clientId, "sync_response", { snapshot, reason: "host_manual_sync_all" }));
+    },
+    setSuitName(suitId: string, name: string): void {
+      const outcome = applySuitName(suitId, name);
+      if (!outcome || !outcome.applied) {
+        return;
+      }
+      transport.broadcast(
+        buildMessage(clientId, "suit_named", {
+          suitId,
+          name: outcome.name
+        })
+      );
     },
     close(): void {
       started = false;
@@ -439,11 +500,25 @@ export function createPeerSession(
   let snapshot: SessionSnapshot | undefined;
   let started = false;
   let helloSent = false;
+  const suitNames: Record<string, string> = {};
   const connections = new Map<PeerId, ConnectionState>();
   connections.set("host", { peerId: "host", status: "new", label: "Host" });
 
   function updateConnections(): void {
     hooks.onConnectionsChanged(rosterFromMap(connections));
+  }
+
+  function emitSuitNames(): void {
+    hooks.onSuitNamesChanged({ ...suitNames });
+  }
+
+  function applySuitName(suitId: string, name: string): void {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return;
+    }
+    suitNames[suitId] = trimmed;
+    emitSuitNames();
   }
 
   function applySnapshot(next: SessionSnapshot, reason: string): void {
@@ -484,6 +559,8 @@ export function createPeerSession(
     if (message.kind === "welcome") {
       assignedPlayerId = message.assignedPlayerId || undefined;
       hooks.onAssignedPlayer(assignedPlayerId);
+      Object.assign(suitNames, message.suitNames ?? {});
+      emitSuitNames();
       connections.clear();
       for (const row of message.roster) {
         connections.set(row.peerId, row);
@@ -497,6 +574,8 @@ export function createPeerSession(
       started = true;
       hooks.onGameStarted(true);
       applySnapshot(message.snapshot, "start_game");
+      Object.assign(suitNames, message.suitNames ?? {});
+      emitSuitNames();
       connections.clear();
       for (const row of message.roster) {
         connections.set(row.peerId, row);
@@ -546,12 +625,18 @@ export function createPeerSession(
       return;
     }
 
+    if (message.kind === "suit_named") {
+      applySuitName(message.suitId, message.name);
+      return;
+    }
+
     if (message.kind === "ping") {
       transport.send("host", buildMessage(clientId, "pong", { nonce: message.nonce }));
     }
   });
 
   updateConnections();
+  emitSuitNames();
   hooks.onAssignedPlayer(undefined);
   hooks.onGameStarted(false);
   hooks.onLog("Peer session initialized; waiting for host channel.");
@@ -590,6 +675,23 @@ export function createPeerSession(
         buildMessage(clientId, "sync_request", {
           knownSeq: snapshot.sessionSeq,
           knownHash: snapshot.stateHash
+        })
+      );
+    },
+    setSuitName(suitId: string, name: string): void {
+      const trimmed = name.trim();
+      if (!trimmed) {
+        return;
+      }
+      if (!suitNames[suitId]) {
+        suitNames[suitId] = trimmed;
+        emitSuitNames();
+      }
+      transport.send(
+        "host",
+        buildMessage(clientId, "suit_named", {
+          suitId,
+          name: trimmed
         })
       );
     },

@@ -12,11 +12,12 @@ function cellContent(min: number, max: number): string {
 
 export function renderPaperclipTable(
   state: GameState,
-  formatPlayer: (playerId: string) => string = (playerId) => playerId
+  formatPlayer: (playerId: string) => string = (playerId) => playerId,
+  formatSuit: (suitId: string) => string = (suitId) => suitId
 ): string {
   let html = "<table><thead><tr><th>Player</th>";
   for (const suit of state.suits) {
-    html += `<th>${suit}</th>`;
+    html += `<th>${formatSuit(suit)}</th>`;
   }
   html += "<th>Hand</th></tr></thead><tbody>";
 

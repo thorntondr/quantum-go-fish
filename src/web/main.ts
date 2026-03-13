@@ -49,6 +49,7 @@ let peerSession: PeerSession | undefined;
 let hostTransport: HostPeerJsTransport | undefined;
 let peerTransport: PeerPeerJsTransport | undefined;
 let playerLabelById = new Map<string, string>();
+let suitLabelById = new Map<string, string>();
 
 function byId(id: string): HTMLElement {
   const node = document.getElementById(id);
@@ -108,6 +109,35 @@ function updatePlayerLabels(connections: ConnectionState[]): void {
 
 function formatPlayer(playerId: string): string {
   return playerLabelById.get(playerId) ?? playerId;
+}
+
+function updateSuitLabels(suitNames: Record<string, string>): void {
+  suitLabelById = new Map(Object.entries(suitNames));
+}
+
+function formatSuit(suitId: string): string {
+  return suitLabelById.get(suitId) ?? suitId;
+}
+
+function maybePromptForSuitName(suitId: string): void {
+  if (suitLabelById.has(suitId)) {
+    return;
+  }
+  const proposed = window.prompt(`Name suit ${suitId}:`);
+  if (!proposed) {
+    return;
+  }
+  const trimmed = proposed.trim();
+  if (!trimmed) {
+    return;
+  }
+  if (hostSession) {
+    hostSession.setSuitName(suitId, trimmed);
+    return;
+  }
+  if (peerSession) {
+    peerSession.setSuitName(suitId, trimmed);
+  }
 }
 
 function playerLabel(index: number): string {
@@ -213,7 +243,7 @@ function renderLegalMoves(current: GameState): void {
     const p = current.turnState.pendingAsk;
     const answers = legalAnswerMoves(current);
     legalMoves.textContent = [
-      `Pending ask: ${formatPlayer(p.asker)} -> ${formatPlayer(p.target)} for ${p.suit}`,
+      `Pending ask: ${formatPlayer(p.asker)} -> ${formatPlayer(p.target)} for ${formatSuit(p.suit)}`,
       `yes: ${answers.yes ? "legal" : "illegal"}`,
       `no:  ${answers.no ? "legal" : "illegal"}`
     ].join("\n");
@@ -224,7 +254,7 @@ function renderLegalMoves(current: GameState): void {
     legalMoves.textContent = "No legal asks.";
     return;
   }
-  legalMoves.textContent = asks.map((m) => `ask ${formatPlayer(m.target)} ${m.suit}`).join("\n");
+  legalMoves.textContent = asks.map((m) => `ask ${formatPlayer(m.target)} ${formatSuit(m.suit)}`).join("\n");
 }
 
 function canAsk(current: GameState): boolean {
@@ -266,7 +296,7 @@ function refreshControls(current: GameState): void {
   askTarget.value = selectedTarget;
 
   const suits = askMoves.filter((m) => m.target === selectedTarget).map((m) => m.suit);
-  askSuit.innerHTML = suits.map((suit) => `<option value="${suit}">${suit}</option>`).join("");
+  askSuit.innerHTML = suits.map((suit) => `<option value="${suit}">${formatSuit(suit)}</option>`).join("");
   askSuit.value = suits[0] ?? "";
 
   askTarget.disabled = !askAllowed;
@@ -315,7 +345,7 @@ function renderRoster(connections: ConnectionState[]): void {
 }
 
 function render(): void {
-  renderState({ stateRoot, statusRoot }, state, formatPlayer);
+  renderState({ stateRoot, statusRoot }, state, formatPlayer, formatSuit);
   renderLegalMoves(state);
   refreshControls(state);
 }
@@ -333,6 +363,10 @@ function sessionHooks() {
     onAssignedPlayer: (playerId: string | undefined) => {
       assignedPlayer = playerId;
       appendLog(`Assigned local player: ${playerId ? formatPlayer(playerId) : "(none)"}`);
+      render();
+    },
+    onSuitNamesChanged: (suitNames: Record<string, string>) => {
+      updateSuitLabels(suitNames);
       render();
     },
     onGameStarted: (started: boolean) => {
@@ -573,6 +607,7 @@ askBtn.addEventListener("click", () => {
     setMoveError("Select a valid target and suit.");
     return;
   }
+  maybePromptForSuitName(suit);
   submitMove({ kind: "Ask", asker: assignedPlayer, target, suit });
 });
 

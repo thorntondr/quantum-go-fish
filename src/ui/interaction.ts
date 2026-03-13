@@ -20,9 +20,10 @@ function formatWinReason(reason?: string): string {
 export function renderState(
   bindings: UiBindings,
   state: GameState,
-  formatPlayer: (playerId: string) => string = (playerId) => playerId
+  formatPlayer: (playerId: string) => string = (playerId) => playerId,
+  formatSuit: (suitId: string) => string = (suitId) => suitId
 ): void {
-  bindings.stateRoot.innerHTML = renderPaperclipTable(state, formatPlayer);
+  bindings.stateRoot.innerHTML = renderPaperclipTable(state, formatPlayer, formatSuit);
   if (state.turnState.phase === "GameOver" && state.turnState.winner) {
     bindings.statusRoot.textContent =
       `Game Over. Winner: ${formatPlayer(state.turnState.winner)} (${formatWinReason(state.turnState.winReason)})`;

@@ -1,4 +1,4 @@
-import type { GameState, Move, PlayerId, SetupConfig } from "../engine/types.js";
+import type { GameState, Move, PlayerId, SetupConfig, SuitId } from "../engine/types.js";
 
 export type SessionRole = "host" | "peer";
 export type ConnectionStatus = "new" | "connecting" | "open" | "closed" | "error";
@@ -39,6 +39,7 @@ interface BaseSessionMessage {
     | "sync_response"
     | "peer_joined"
     | "peer_left"
+    | "suit_named"
     | "ping"
     | "pong";
 }
@@ -53,11 +54,18 @@ export type SessionMessage =
       assignedPlayerId: PlayerId;
       roster: ConnectionState[];
       hostClientId: ClientId;
+      suitNames: Record<SuitId, string>;
     })
   | (BaseSessionMessage & {
       kind: "start_game";
       snapshot: SessionSnapshot;
       roster: ConnectionState[];
+      suitNames: Record<SuitId, string>;
+    })
+  | (BaseSessionMessage & {
+      kind: "suit_named";
+      suitId: SuitId;
+      name: string;
     })
   | (BaseSessionMessage & {
       kind: "move_request";
@@ -113,4 +121,5 @@ export interface SessionUiHooks {
   onSnapshot: (snapshot: SessionSnapshot) => void;
   onAssignedPlayer: (playerId: string | undefined) => void;
   onGameStarted: (started: boolean) => void;
+  onSuitNamesChanged: (suitNames: Record<SuitId, string>) => void;
 }
