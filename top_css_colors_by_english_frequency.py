@@ -7,7 +7,7 @@ from wordfreq import zipf_frequency
 
 
 LANG = "en"
-TOP_N = 20
+TOP_N = 13
 
 
 def fetch_css_named_colors() -> List[str]:
@@ -49,37 +49,40 @@ CSS_NAMED_COLORS = {
     "tan":"#D2B48C","teal":"#008080","thistle":"#D8BFD8","tomato":"#FF6347","turquoise":"#40E0D0",
     "violet":"#EE82EE","wheat":"#F5DEB3","white":"#FFFFFF","whitesmoke":"#F5F5F5","yellow":"#FFFF00",
     "yellowgreen":"#9ACD32",
-# standard English versions
-    'alice blue': '#F0F8FF', 'antique white': '#FAEBD7', 'blanched almond': '#FFEBCD', 'blue violet': '#8A2BE2',
-    'burly wood': '#DEB887', 'cadet blue': '#5F9EA0', 'cornflower blue': '#6495ED', 'dark blue': '#00008B',
-    'dark cyan': '#008B8B', 'dark goldenrod': '#B8860B', 'dark gray': '#A9A9A9', 'dark green': '#006400',
-    'dark grey': '#A9A9A9', 'dark khaki': '#BDB76B', 'dark magenta': '#8B008B', 'dark olive green': '#556B2F',
-    'dark orange': '#FF8C00', 'dark orchid': '#9932CC', 'dark red': '#8B0000', 'dark salmon': '#E9967A',
-    'dark sea green': '#8FBC8F', 'dark slate blue': '#483D8B', 'dark slate gray': '#2F4F4F',
-    'dark slate grey': '#2F4F4F', 'dark turquoise': '#00CED1', 'dark violet': '#9400D3', 'deep pink': '#FF1493',
-    'deep sky blue': '#00BFFF', 'dim gray': '#696969', 'dim grey': '#696969', 'dodger blue': '#1E90FF',
-    'fire brick': '#B22222', 'floral white': '#FFFAF0', 'forest green': '#228B22', 'ghost white': '#F8F8FF',
-    'green yellow': '#ADFF2F', 'honey dew': '#F0FFF0', 'hot pink': '#FF69B4', 'indian red': '#CD5C5C',
-    'lavender blush': '#FFF0F5', 'lawn green': '#7CFC00', 'lemon chiffon': '#FFFACD', 'light blue': '#ADD8E6',
-    'light coral': '#F08080', 'light cyan': '#E0FFFF', 'light goldenrod yellow': '#FAFAD2', 'light gray': '#D3D3D3',
-    'light green': '#90EE90', 'light grey': '#D3D3D3', 'light pink': '#FFB6C1', 'light salmon': '#FFA07A',
-    'light sea green': '#20B2AA', 'light sky blue': '#87CEFA', 'light slate gray': '#778899',
-    'light slate grey': '#778899', 'light steel blue': '#B0C4DE', 'light yellow': '#FFFFE0', 'lime green': '#32CD32',
-    'medium aquamarine': '#66CDAA', 'medium blue': '#0000CD', 'medium orchid': '#BA55D3', 'medium purple': '#9370DB',
-    'medium sea green': '#3CB371', 'medium slate blue': '#7B68EE', 'medium spring green': '#00FA9A',
-    'medium turquoise': '#48D1CC', 'medium violet red': '#C71585', 'midnight blue': '#191970', 'mint cream': '#F5FFFA',
-    'misty rose': '#FFE4E1', 'navajo white': '#FFDEAD', 'old lace': '#FDF5E6', 'olive drab': '#6B8E23',
-    'orange red': '#FF4500', 'pale goldenrod': '#EEE8AA', 'pale green': '#98FB98', 'pale turquoise': '#AFEEEE',
-    'pale violet red': '#DB7093', 'papaya whip': '#FFEFD5', 'peach puff': '#FFDAB9', 'powder blue': '#B0E0E6',
-    'rebecca purple': '#663399', 'rosy brown': '#BC8F8F', 'royal blue': '#4169E1', 'saddle brown': '#8B4513',
-    'sandy brown': '#F4A460', 'sea green': '#2E8B57', 'sea shell': '#FFF5EE', 'sky blue': '#87CEEB',
-    'slate blue': '#6A5ACD', 'slate gray': '#708090', 'slate grey': '#708090', 'spring green': '#00FF7F',
-    'steel blue': '#4682B4', 'white smoke': '#F5F5F5', 'yellow green': '#9ACD32', "corn silk":"#FFF8DC",
-# alternate word breaks
-    'corn flower blue': '#6495ED', 'dark seagreen': "#8FBC8F", "medium seagreen": "#3CB371", "light seagreen": "20B2AA",
+# # standard English versions
+#     'alice blue': '#F0F8FF', 'antique white': '#FAEBD7', 'blanched almond': '#FFEBCD', 'blue violet': '#8A2BE2',
+#     'burly wood': '#DEB887', 'cadet blue': '#5F9EA0', 'cornflower blue': '#6495ED', 'dark blue': '#00008B',
+#     'dark cyan': '#008B8B', 'dark goldenrod': '#B8860B', 'dark gray': '#A9A9A9', 'dark green': '#006400',
+#     'dark grey': '#A9A9A9', 'dark khaki': '#BDB76B', 'dark magenta': '#8B008B', 'dark olive green': '#556B2F',
+#     'dark orange': '#FF8C00', 'dark orchid': '#9932CC', 'dark red': '#8B0000', 'dark salmon': '#E9967A',
+#     'dark sea green': '#8FBC8F', 'dark slate blue': '#483D8B', 'dark slate gray': '#2F4F4F',
+#     'dark slate grey': '#2F4F4F', 'dark turquoise': '#00CED1', 'dark violet': '#9400D3', 'deep pink': '#FF1493',
+#     'deep sky blue': '#00BFFF', 'dim gray': '#696969', 'dim grey': '#696969', 'dodger blue': '#1E90FF',
+#     'fire brick': '#B22222', 'floral white': '#FFFAF0', 'forest green': '#228B22', 'ghost white': '#F8F8FF',
+#     'green yellow': '#ADFF2F', 'honey dew': '#F0FFF0', 'hot pink': '#FF69B4', 'indian red': '#CD5C5C',
+#     'lavender blush': '#FFF0F5', 'lawn green': '#7CFC00', 'lemon chiffon': '#FFFACD', 'light blue': '#ADD8E6',
+#     'light coral': '#F08080', 'light cyan': '#E0FFFF', 'light goldenrod yellow': '#FAFAD2', 'light gray': '#D3D3D3',
+#     'light green': '#90EE90', 'light grey': '#D3D3D3', 'light pink': '#FFB6C1', 'light salmon': '#FFA07A',
+#     'light sea green': '#20B2AA', 'light sky blue': '#87CEFA', 'light slate gray': '#778899',
+#     'light slate grey': '#778899', 'light steel blue': '#B0C4DE', 'light yellow': '#FFFFE0', 'lime green': '#32CD32',
+#     'medium aquamarine': '#66CDAA', 'medium blue': '#0000CD', 'medium orchid': '#BA55D3', 'medium purple': '#9370DB',
+#     'medium sea green': '#3CB371', 'medium slate blue': '#7B68EE', 'medium spring green': '#00FA9A',
+#     'medium turquoise': '#48D1CC', 'medium violet red': '#C71585', 'midnight blue': '#191970', 'mint cream': '#F5FFFA',
+#     'misty rose': '#FFE4E1', 'navajo white': '#FFDEAD', 'old lace': '#FDF5E6', 'olive drab': '#6B8E23',
+#     'orange red': '#FF4500', 'pale goldenrod': '#EEE8AA', 'pale green': '#98FB98', 'pale turquoise': '#AFEEEE',
+#     'pale violet red': '#DB7093', 'papaya whip': '#FFEFD5', 'peach puff': '#FFDAB9', 'powder blue': '#B0E0E6',
+#     'rebecca purple': '#663399', 'rosy brown': '#BC8F8F', 'royal blue': '#4169E1', 'saddle brown': '#8B4513',
+#     'sandy brown': '#F4A460', 'sea green': '#2E8B57', 'sea shell': '#FFF5EE', 'sky blue': '#87CEEB',
+#     'slate blue': '#6A5ACD', 'slate gray': '#708090', 'slate grey': '#708090', 'spring green': '#00FF7F',
+#     'steel blue': '#4682B4', 'white smoke': '#F5F5F5', 'yellow green': '#9ACD32', "corn silk":"#FFF8DC",
+# # alternate word breaks
+#     'corn flower blue': '#6495ED', 'dark seagreen': "#8FBC8F", "medium seagreen": "#3CB371", "light seagreen": "20B2AA",
 }
 
 COMMON_COLOR_NAMES = ['red', 'yellow', 'blue', 'green', 'pink', 'brown', 'orange', 'purple', 'violet', 'cyan', 'gold', 'olive', 'turquoise', 'vermilion', 'sapphire', 'navy', 'beige', 'tan', 'maroon', 'teal', 'turquoise']
+IGNORE = ['white', 'black', 'gray', 'grey', 'silver', 'snow', 'ivory', 'gold']
+
+OKABE_ITO_COLORS = ['#E69F00', '#56B4E9', '#009E73', '#F0E442', '#0072B2', '#D55E00', '#CC79A7', '#000000']
 
 def english_frequency(name: str) -> float:
     return zipf_frequency(name, LANG)
@@ -94,7 +97,7 @@ def main() -> int:
 
     by_hex = {}
     for name in names:
-        if not any(x in name for x in COMMON_COLOR_NAMES):
+        if any(x in name for x in IGNORE):
             continue
         hex_value = CSS_NAMED_COLORS.get(name)
         if not hex_value:
