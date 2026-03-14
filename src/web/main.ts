@@ -1,6 +1,6 @@
 import { createHostSession, createPeerSession } from "../app/sessionController.js";
 import type { HostSession, PeerSession } from "../app/sessionController.js";
-import type { ConnectionState, RoomConfig, SessionRole } from "../app/sessionTypes.js";
+import type { ConnectionState, RoomConfig, SessionRole, SuitMeta as SessionSuitMeta } from "../app/sessionTypes.js";
 import { HostPeerJsTransport, PeerPeerJsTransport } from "../app/peerJsTransport.js";
 import { createInitialState } from "../engine/state.js";
 import { isLegalMove } from "../engine/rules.js";
@@ -46,6 +46,15 @@ const yesBtn = requireEl("yesBtn") as HTMLButtonElement;
 const noBtn = requireEl("noBtn") as HTMLButtonElement;
 const leaveGameBtn = getEl("leaveGameBtn") as HTMLButtonElement | null;
 
+const suitOverlay = getEl("suitOverlay");
+const suitOverlayLabel = getEl("suitOverlayLabel");
+const suitNameInput = getEl("suitNameInput") as HTMLInputElement | null;
+const suitSymbolInput = getEl("suitSymbolInput") as HTMLInputElement | null;
+const suitColorInput = getEl("suitColorInput") as HTMLInputElement | null;
+const suitSaveBtn = getEl("suitSaveBtn") as HTMLButtonElement | null;
+const suitCancelBtn = getEl("suitCancelBtn") as HTMLButtonElement | null;
+const emojiSuggestions = getEl("emojiSuggestions");
+
 const MAX_PLAYERS = 13;
 let state = createInitialState(buildConfig(1));
 let assignedPlayer: string | undefined;
@@ -55,7 +64,7 @@ let peerSession: PeerSession | undefined;
 let hostTransport: HostPeerJsTransport | undefined;
 let peerTransport: PeerPeerJsTransport | undefined;
 let playerLabelById = new Map<string, string>();
-type SuitMeta = { name?: string; symbol?: string; color?: string };
+type SuitMeta = SessionSuitMeta;
 let suitMetaById = new Map<string, SuitMeta>();
 
 function extractEmoji(label: string): string | undefined {
@@ -64,8 +73,12 @@ function extractEmoji(label: string): string | undefined {
 }
 let playerStatusById = new Map<string, string>();
 let currentRoomCode = "";
+let pendingSuitEdit: { suitId: string; move?: Move } | undefined;
 
 const STORAGE_KEY = "qgf-session-v1";
+const OKABE_ITO = ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"];
+const EMOJILIB_URL = "https://unpkg.com/emojilib@4.0.2/dist/emoji-en-US.json";
+let emojiKeywordMap: Record<string, string[]> | undefined;
 
 function byId(id: string): HTMLElement {
   const node = document.getElementById(id);
@@ -127,10 +140,12 @@ function formatPlayer(playerId: string): string {
   return playerLabelById.get(playerId) ?? playerId;
 }
 
-function updateSuitLabels(suitNames: Record<string, string>): void {
+function updateSuitLabels(suitMeta: Record<string, SuitMeta>): void {
   suitMetaById = new Map();
-  for (const [suitId, name] of Object.entries(suitNames)) {
-    suitMetaById.set(suitId, { name, symbol: extractEmoji(name) });
+  for (const [suitId, meta] of Object.entries(suitMeta)) {
+    const name = meta.name?.trim();
+    const symbol = meta.symbol?.trim() || (name ? extractEmoji(name) : undefined);
+    suitMetaById.set(suitId, { ...meta, name, symbol });
   }
 }
 
@@ -138,29 +153,111 @@ function formatSuit(suitId: string): string {
   return suitMetaById.get(suitId)?.name ?? suitId;
 }
 
-function maybePromptForSuitName(suitId: string): void {
-  if (suitMetaById.has(suitId)) {
-    return;
-  }
-  const proposed = window.prompt(`Name suit ${suitId}:`);
-  if (!proposed) {
-    return;
-  }
-  const trimmed = proposed.trim();
-  if (!trimmed) {
-    return;
-  }
+function getSuitMeta(suitId: string): SuitMeta | undefined {
+  return suitMetaById.get(suitId);
+}
+
+function submitSuitMeta(suitId: string, meta: SuitMeta): void {
   if (hostSession) {
-    hostSession.setSuitName(suitId, trimmed);
+    hostSession.setSuitMeta(suitId, meta);
     return;
   }
   if (peerSession) {
-    peerSession.setSuitName(suitId, trimmed);
+    peerSession.setSuitMeta(suitId, meta);
   }
 }
 
-function getSuitMeta(suitId: string): SuitMeta | undefined {
-  return suitMetaById.get(suitId);
+function defaultSuitColor(suitId: string): string {
+  const index = Math.max(0, state.suits.indexOf(suitId));
+  return OKABE_ITO[index % OKABE_ITO.length];
+}
+
+async function ensureEmojiLibrary(): Promise<void> {
+  if (emojiKeywordMap) {
+    return;
+  }
+  try {
+    const response = await fetch(EMOJILIB_URL);
+    if (!response.ok) {
+      return;
+    }
+    const data = (await response.json()) as Record<string, string[]>;
+    emojiKeywordMap = data;
+  } catch {
+    // ignore fetch failures; suggestions will be unavailable
+  }
+}
+
+function updateEmojiSuggestions(query: string): void {
+  if (!emojiSuggestions) {
+    return;
+  }
+  const trimmed = query.trim().toLowerCase();
+  if (!trimmed || !emojiKeywordMap) {
+    emojiSuggestions.innerHTML = "";
+    return;
+  }
+  const tokens = trimmed.split(/[^a-z0-9]+/).filter((token) => token.length > 1);
+  if (tokens.length === 0) {
+    emojiSuggestions.innerHTML = "";
+    return;
+  }
+  const scores = new Map<string, number>();
+  for (const [emoji, keywords] of Object.entries(emojiKeywordMap)) {
+    let score = 0;
+    for (const token of tokens) {
+      if (keywords.includes(token)) {
+        score += 2;
+      } else if (keywords.some((keyword) => keyword.startsWith(token))) {
+        score += 1;
+      }
+    }
+    if (score > 0) {
+      scores.set(emoji, score);
+    }
+  }
+  const results = [...scores.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 12)
+    .map(([emoji]) => emoji);
+
+  if (results.length === 0) {
+    emojiSuggestions.innerHTML = "";
+    return;
+  }
+
+  emojiSuggestions.innerHTML = results
+    .map(
+      (emoji) => `<button class="emoji-suggestion" type="button" data-emoji="${emoji}">${emoji}</button>`
+    )
+    .join("");
+}
+
+function openSuitOverlay(suitId: string, move?: Move): void {
+  if (!suitOverlay || !suitNameInput || !suitSymbolInput || !suitColorInput) {
+    return;
+  }
+  pendingSuitEdit = { suitId, move };
+  const meta = getSuitMeta(suitId) ?? {};
+  const name = meta.name ?? "";
+  const symbol = meta.symbol ?? (name ? extractEmoji(name) ?? "" : "");
+  const color = meta.color ?? defaultSuitColor(suitId);
+  suitNameInput.value = name;
+  suitSymbolInput.value = symbol;
+  suitColorInput.value = color;
+  if (suitOverlayLabel) {
+    suitOverlayLabel.textContent = `Suit ${formatSuit(suitId)}`;
+  }
+  suitOverlay.classList.add("active");
+  void ensureEmojiLibrary().then(() => updateEmojiSuggestions(suitNameInput.value));
+}
+
+function closeSuitOverlay(): void {
+  if (!suitOverlay) {
+    return;
+  }
+  suitOverlay.classList.remove("active");
+  pendingSuitEdit = undefined;
 }
 
 function loadStoredSession(): Record<string, unknown> | undefined {
@@ -217,8 +314,10 @@ function persistSession(): void {
     const snapshot = hostSession.getSnapshot();
     payload.snapshot = snapshot.state;
     payload.sessionSeq = snapshot.sessionSeq;
-    payload.suitNames = hostSession.getSuitNames();
+    payload.suitMeta = hostSession.getSuitMeta();
     payload.seatClaims = hostSession.getSeatClaims();
+  } else if (suitMetaById.size > 0) {
+    payload.suitMeta = Object.fromEntries(suitMetaById.entries());
   }
   saveStoredSession(payload);
 }
@@ -503,8 +602,8 @@ function sessionHooks() {
       render();
       persistSession();
     },
-    onSuitNamesChanged: (suitNames: Record<string, string>) => {
-      updateSuitLabels(suitNames);
+    onSuitMetaChanged: (suitMeta: Record<string, SuitMeta>) => {
+      updateSuitLabels(suitMeta);
       render();
       persistSession();
     },
@@ -600,7 +699,7 @@ async function initSession(options: {
     snapshot?: GameState;
     sessionSeq?: number;
     started?: boolean;
-    suitNames?: Record<string, string>;
+    suitMeta?: Record<string, SuitMeta>;
     seatClaims?: Array<{ clientId: string; playerId: string; expiresAt: number; label: string }>;
   };
 }): Promise<void> {
@@ -646,7 +745,7 @@ async function initSession(options: {
       initialState: options.resume?.snapshot,
       sessionSeq: options.resume?.sessionSeq,
       started: options.resume?.started,
-      suitNames: options.resume?.suitNames,
+      suitMeta: options.resume?.suitMeta,
       seatClaims: options.resume?.seatClaims
     });
     appendLog("Host session initialized (PeerJS Cloud).");
@@ -833,6 +932,59 @@ if (shareRoomBtn && shareRoomLink) {
   });
 }
 
+if (suitCancelBtn) {
+  suitCancelBtn.addEventListener("click", () => {
+    closeSuitOverlay();
+  });
+}
+
+if (suitOverlay) {
+  suitOverlay.addEventListener("click", (event) => {
+    if (event.target === suitOverlay) {
+      closeSuitOverlay();
+    }
+  });
+}
+
+if (suitNameInput) {
+  suitNameInput.addEventListener("input", () => {
+    updateEmojiSuggestions(suitNameInput.value);
+  });
+}
+
+if (emojiSuggestions && suitSymbolInput) {
+  emojiSuggestions.addEventListener("click", (event) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) {
+      return;
+    }
+    const emoji = target.getAttribute("data-emoji");
+    if (!emoji) {
+      return;
+    }
+    suitSymbolInput.value = emoji;
+  });
+}
+
+if (suitSaveBtn && suitNameInput && suitSymbolInput && suitColorInput) {
+  suitSaveBtn.addEventListener("click", () => {
+    if (!pendingSuitEdit) {
+      return;
+    }
+    const meta: SuitMeta = {
+      name: suitNameInput.value.trim() || undefined,
+      symbol: suitSymbolInput.value.trim() || undefined,
+      color: suitColorInput.value.trim() || undefined
+    };
+    submitSuitMeta(pendingSuitEdit.suitId, meta);
+    const move = pendingSuitEdit.move;
+    closeSuitOverlay();
+    if (move) {
+      submitMove(move);
+    }
+  });
+}
+
 askBtn.addEventListener("click", () => {
   if (!assignedPlayer) {
     setMoveError("No assigned player.");
@@ -844,8 +996,13 @@ askBtn.addEventListener("click", () => {
     setMoveError("Select a valid target and suit.");
     return;
   }
-  maybePromptForSuitName(suit);
-  submitMove({ kind: "Ask", asker: assignedPlayer, target, suit });
+  const move: Move = { kind: "Ask", asker: assignedPlayer, target, suit };
+  const meta = getSuitMeta(suit);
+  if (!meta) {
+    openSuitOverlay(suit, move);
+    return;
+  }
+  submitMove(move);
 });
 
 yesBtn.addEventListener("click", () => {
@@ -892,7 +1049,7 @@ if (storedSession) {
         snapshot: storedSession.snapshot as GameState | undefined,
         sessionSeq: typeof storedSession.sessionSeq === "number" ? storedSession.sessionSeq : undefined,
         started: Boolean(storedSession.started),
-        suitNames: storedSession.suitNames as Record<string, string> | undefined,
+        suitMeta: storedSession.suitMeta as Record<string, SuitMeta> | undefined,
         seatClaims: storedSession.seatClaims as Array<{
           clientId: string;
           playerId: string;

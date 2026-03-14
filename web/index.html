@@ -163,6 +163,62 @@
       background: #f8fcf9;
     }
 
+    .overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15, 30, 24, 0.45);
+      padding: 16px;
+      z-index: 50;
+    }
+
+    .overlay.active {
+      display: flex;
+    }
+
+    .overlay-panel {
+      width: min(420px, 92vw);
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 18px;
+      border: 1px solid #cfd9d3;
+      box-shadow: 0 18px 36px rgba(10, 20, 16, 0.2);
+      display: grid;
+      gap: 12px;
+    }
+
+    .overlay-panel h3 {
+      margin: 0;
+    }
+
+    .overlay-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .emoji-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 32px;
+    }
+
+    .emoji-suggestion {
+      border: 1px solid #c6d6cd;
+      background: #f5faf7;
+      padding: 4px 6px;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .emoji-suggestion:hover {
+      background: #e6f2ec;
+    }
+
     .hand-board {
       display: grid;
       gap: 18px;
@@ -395,6 +451,30 @@
         <pre id="legalMoves"></pre>
       </section>
     </section>
+  </div>
+
+  <div id="suitOverlay" class="overlay">
+    <div class="overlay-panel">
+      <h3>Customize Suit</h3>
+      <p id="suitOverlayLabel" class="muted"></p>
+      <label>
+        Name
+        <input id="suitNameInput" type="text" placeholder="e.g., Moons">
+      </label>
+      <label>
+        Symbol (emoji)
+        <input id="suitSymbolInput" type="text" placeholder="e.g., 🌙">
+      </label>
+      <div id="emojiSuggestions" class="emoji-suggestions"></div>
+      <label>
+        Color
+        <input id="suitColorInput" type="color" value="#d6d9de">
+      </label>
+      <div class="overlay-actions">
+        <button id="suitSaveBtn" class="primary">Save</button>
+        <button id="suitCancelBtn">Cancel</button>
+      </div>
+    </div>
   </div>
 
   <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>

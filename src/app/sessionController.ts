@@ -11,7 +11,8 @@ import type {
   RoomConfig,
   SessionMessage,
   SessionSnapshot,
-  SessionUiHooks
+  SessionUiHooks,
+  SuitMeta
 } from "./sessionTypes.js";
 import type { SessionTransport } from "./sessionTransport.js";
 
@@ -23,7 +24,7 @@ interface SessionDeps {
   initialState?: GameState;
   sessionSeq?: number;
   started?: boolean;
-  suitNames?: Record<string, string>;
+  suitMeta?: Record<string, SuitMeta>;
   seatClaims?: SeatClaim[];
 }
 
@@ -32,19 +33,19 @@ export interface HostSession {
   startGame: () => void;
   restartGame: () => void;
   requestSync: (peerId?: PeerId) => void;
-  setSuitName: (suitId: string, name: string) => void;
+  setSuitMeta: (suitId: string, meta: SuitMeta) => void;
   close: () => void;
   getSnapshot: () => SessionSnapshot;
   getConnections: () => ConnectionState[];
   getClientId: () => ClientId;
-  getSuitNames: () => Record<string, string>;
+  getSuitMeta: () => Record<string, SuitMeta>;
   getSeatClaims: () => SeatClaim[];
 }
 
 export interface PeerSession {
   submitMove: (move: Move) => void;
   requestSync: () => void;
-  setSuitName: (suitId: string, name: string) => void;
+  setSuitMeta: (suitId: string, meta: SuitMeta) => void;
   leaveGame: () => void;
   close: () => void;
   getSnapshot: () => SessionSnapshot | undefined;
@@ -68,7 +69,7 @@ function defaultHooks(): SessionUiHooks {
     onSnapshot: () => {},
     onAssignedPlayer: () => {},
     onGameStarted: () => {},
-    onSuitNamesChanged: () => {}
+    onSuitMetaChanged: () => {}
   };
 }
 
@@ -117,7 +118,7 @@ export function createHostSession(
   let sessionSeq = deps.sessionSeq ?? 0;
   let snapshot = snapshotFromState(baseState, sessionSeq);
   let started = deps.started ?? false;
-  const suitNames: Record<string, string> = { ...(deps.suitNames ?? {}) };
+  const suitMeta: Record<string, SuitMeta> = { ...(deps.suitMeta ?? {}) };
 
   const connections = new Map<PeerId, ConnectionState>([
     [
@@ -224,10 +225,10 @@ export function createHostSession(
 
     refreshSnapshotForRoster(reason, true);
     if (reason === "restart_game") {
-      for (const key of Object.keys(suitNames)) {
-        delete suitNames[key];
+      for (const key of Object.keys(suitMeta)) {
+        delete suitMeta[key];
       }
-      emitSuitNames();
+      emitSuitMeta();
       seatClaims.clear();
     }
     started = true;
@@ -238,7 +239,7 @@ export function createHostSession(
       buildMessage(clientId, "start_game", {
         snapshot,
         roster: rosterFromMap(connections),
-        suitNames: { ...suitNames }
+        suitMeta: { ...suitMeta }
       })
     );
   }
@@ -247,22 +248,43 @@ export function createHostSession(
     hooks.onConnectionsChanged(rosterFromMap(connections));
   }
 
-  function emitSuitNames(): void {
-    hooks.onSuitNamesChanged({ ...suitNames });
+  function emitSuitMeta(): void {
+    hooks.onSuitMetaChanged({ ...suitMeta });
   }
 
-  function applySuitName(suitId: string, name: string): { applied: boolean; name: string } | undefined {
-    const trimmed = name.trim();
-    if (!trimmed) {
+  function normalizeSuitMeta(meta: SuitMeta): SuitMeta | undefined {
+    const name = meta.name?.trim();
+    const symbol = meta.symbol?.trim();
+    const color = meta.color?.trim();
+    const next: SuitMeta = {};
+    if (name) {
+      next.name = name;
+    }
+    if (symbol) {
+      next.symbol = symbol;
+    }
+    if (color) {
+      next.color = color;
+    }
+    return Object.keys(next).length > 0 ? next : undefined;
+  }
+
+  function hasSuitMeta(meta: SuitMeta | undefined): boolean {
+    return Boolean(meta?.name || meta?.symbol || meta?.color);
+  }
+
+  function applySuitMeta(suitId: string, meta: SuitMeta): { applied: boolean; meta: SuitMeta } | undefined {
+    const normalized = normalizeSuitMeta(meta);
+    if (!normalized) {
       return undefined;
     }
-    const existing = suitNames[suitId];
-    if (existing) {
-      return { applied: false, name: existing };
+    const existing = suitMeta[suitId];
+    if (hasSuitMeta(existing)) {
+      return { applied: false, meta: existing ?? {} };
     }
-    suitNames[suitId] = trimmed;
-    emitSuitNames();
-    return { applied: true, name: trimmed };
+    suitMeta[suitId] = normalized;
+    emitSuitMeta();
+    return { applied: true, meta: normalized };
   }
 
   function updateSnapshot(nextState: GameState, reason: string, broadcast = true): void {
@@ -474,7 +496,7 @@ export function createHostSession(
           assignedPlayerId,
           roster: rosterFromMap(connections),
           hostClientId: clientId,
-          suitNames: { ...suitNames }
+          suitMeta: { ...suitMeta }
         })
       );
       if (started) {
@@ -483,33 +505,33 @@ export function createHostSession(
           buildMessage(clientId, "start_game", {
             snapshot,
             roster: rosterFromMap(connections),
-            suitNames: { ...suitNames }
-          })
-        );
+          suitMeta: { ...suitMeta }
+        })
+      );
       }
       broadcastRosterJoined(updated);
       hooks.onLog(`Peer hello accepted from ${updated.label} (${fromPeerId}).`);
       return;
     }
 
-    if (message.kind === "suit_named") {
-      const outcome = applySuitName(message.suitId, message.name);
+    if (message.kind === "suit_meta") {
+      const outcome = applySuitMeta(message.suitId, message.meta);
       if (!outcome) {
         return;
       }
       if (outcome.applied) {
         transport.broadcast(
-          buildMessage(clientId, "suit_named", {
+          buildMessage(clientId, "suit_meta", {
             suitId: message.suitId,
-            name: outcome.name
+            meta: outcome.meta
           })
         );
       } else {
         transport.send(
           fromPeerId,
-          buildMessage(clientId, "suit_named", {
+          buildMessage(clientId, "suit_meta", {
             suitId: message.suitId,
-            name: outcome.name
+            meta: outcome.meta
           })
         );
       }
@@ -607,7 +629,7 @@ export function createHostSession(
   hooks.onAssignedPlayer(hostPlayerId);
   hooks.onSnapshot(snapshot);
   updateConnections();
-  emitSuitNames();
+  emitSuitMeta();
   hooks.onGameStarted(started);
 
   return {
@@ -632,15 +654,15 @@ export function createHostSession(
       }
       transport.broadcast(buildMessage(clientId, "sync_response", { snapshot, reason: "host_manual_sync_all" }));
     },
-    setSuitName(suitId: string, name: string): void {
-      const outcome = applySuitName(suitId, name);
+    setSuitMeta(suitId: string, meta: SuitMeta): void {
+      const outcome = applySuitMeta(suitId, meta);
       if (!outcome || !outcome.applied) {
         return;
       }
       transport.broadcast(
-        buildMessage(clientId, "suit_named", {
+        buildMessage(clientId, "suit_meta", {
           suitId,
-          name: outcome.name
+          meta: outcome.meta
         })
       );
     },
@@ -658,8 +680,8 @@ export function createHostSession(
     getClientId(): ClientId {
       return clientId;
     },
-    getSuitNames(): Record<string, string> {
-      return { ...suitNames };
+    getSuitMeta(): Record<string, SuitMeta> {
+      return { ...suitMeta };
     },
     getSeatClaims(): SeatClaim[] {
       return [...seatClaims.values()].map((claim) => ({ ...claim }));
@@ -679,7 +701,7 @@ export function createPeerSession(
   let snapshot: SessionSnapshot | undefined;
   let started = false;
   let helloSent = false;
-  const suitNames: Record<string, string> = {};
+  const suitMeta: Record<string, SuitMeta> = {};
   const connections = new Map<PeerId, ConnectionState>();
   connections.set("host", { peerId: "host", status: "new", label: "Host" });
 
@@ -687,17 +709,42 @@ export function createPeerSession(
     hooks.onConnectionsChanged(rosterFromMap(connections));
   }
 
-  function emitSuitNames(): void {
-    hooks.onSuitNamesChanged({ ...suitNames });
+  function emitSuitMeta(): void {
+    hooks.onSuitMetaChanged({ ...suitMeta });
   }
 
-  function applySuitName(suitId: string, name: string): void {
-    const trimmed = name.trim();
-    if (!trimmed) {
+  function normalizeSuitMeta(meta: SuitMeta): SuitMeta | undefined {
+    const name = meta.name?.trim();
+    const symbol = meta.symbol?.trim();
+    const color = meta.color?.trim();
+    const next: SuitMeta = {};
+    if (name) {
+      next.name = name;
+    }
+    if (symbol) {
+      next.symbol = symbol;
+    }
+    if (color) {
+      next.color = color;
+    }
+    return Object.keys(next).length > 0 ? next : undefined;
+  }
+
+  function hasSuitMeta(meta: SuitMeta | undefined): boolean {
+    return Boolean(meta?.name || meta?.symbol || meta?.color);
+  }
+
+  function applySuitMeta(suitId: string, meta: SuitMeta): void {
+    const normalized = normalizeSuitMeta(meta);
+    if (!normalized) {
       return;
     }
-    suitNames[suitId] = trimmed;
-    emitSuitNames();
+    const existing = suitMeta[suitId];
+    if (hasSuitMeta(existing)) {
+      return;
+    }
+    suitMeta[suitId] = normalized;
+    emitSuitMeta();
   }
 
   function applySnapshot(next: SessionSnapshot, reason: string): void {
@@ -738,11 +785,11 @@ export function createPeerSession(
     if (message.kind === "welcome") {
       assignedPlayerId = message.assignedPlayerId || undefined;
       hooks.onAssignedPlayer(assignedPlayerId);
-      for (const key of Object.keys(suitNames)) {
-        delete suitNames[key];
+      for (const key of Object.keys(suitMeta)) {
+        delete suitMeta[key];
       }
-      Object.assign(suitNames, message.suitNames ?? {});
-      emitSuitNames();
+      Object.assign(suitMeta, message.suitMeta ?? {});
+      emitSuitMeta();
       connections.clear();
       for (const row of message.roster) {
         connections.set(row.peerId, row);
@@ -767,11 +814,11 @@ export function createPeerSession(
       started = true;
       hooks.onGameStarted(true);
       applySnapshot(message.snapshot, "start_game");
-      for (const key of Object.keys(suitNames)) {
-        delete suitNames[key];
+      for (const key of Object.keys(suitMeta)) {
+        delete suitMeta[key];
       }
-      Object.assign(suitNames, message.suitNames ?? {});
-      emitSuitNames();
+      Object.assign(suitMeta, message.suitMeta ?? {});
+      emitSuitMeta();
       connections.clear();
       for (const row of message.roster) {
         connections.set(row.peerId, row);
@@ -821,8 +868,8 @@ export function createPeerSession(
       return;
     }
 
-    if (message.kind === "suit_named") {
-      applySuitName(message.suitId, message.name);
+    if (message.kind === "suit_meta") {
+      applySuitMeta(message.suitId, message.meta);
       return;
     }
 
@@ -832,7 +879,7 @@ export function createPeerSession(
   });
 
   updateConnections();
-  emitSuitNames();
+  emitSuitMeta();
   hooks.onAssignedPlayer(undefined);
   hooks.onGameStarted(false);
   hooks.onLog("Peer session initialized; waiting for host channel.");
@@ -874,20 +921,20 @@ export function createPeerSession(
         })
       );
     },
-    setSuitName(suitId: string, name: string): void {
-      const trimmed = name.trim();
-      if (!trimmed) {
+    setSuitMeta(suitId: string, meta: SuitMeta): void {
+      const normalized = normalizeSuitMeta(meta);
+      if (!normalized) {
         return;
       }
-      if (!suitNames[suitId]) {
-        suitNames[suitId] = trimmed;
-        emitSuitNames();
+      if (hasSuitMeta(suitMeta[suitId])) {
+        return;
       }
+      applySuitMeta(suitId, normalized);
       transport.send(
         "host",
-        buildMessage(clientId, "suit_named", {
+        buildMessage(clientId, "suit_meta", {
           suitId,
-          name: trimmed
+          meta: normalized
         })
       );
     },

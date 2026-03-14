@@ -9,6 +9,12 @@ export interface RoomConfig {
   setup: SetupConfig;
 }
 
+export interface SuitMeta {
+  name?: string;
+  symbol?: string;
+  color?: string;
+}
+
 export interface ConnectionState {
   peerId: PeerId;
   clientId?: ClientId;
@@ -39,7 +45,7 @@ interface BaseSessionMessage {
     | "sync_response"
     | "peer_joined"
     | "peer_left"
-    | "suit_named"
+    | "suit_meta"
     | "leave_game"
     | "join_reject"
     | "ping"
@@ -56,18 +62,18 @@ export type SessionMessage =
       assignedPlayerId: PlayerId;
       roster: ConnectionState[];
       hostClientId: ClientId;
-      suitNames: Record<SuitId, string>;
+      suitMeta: Record<SuitId, SuitMeta>;
     })
   | (BaseSessionMessage & {
       kind: "start_game";
       snapshot: SessionSnapshot;
       roster: ConnectionState[];
-      suitNames: Record<SuitId, string>;
+      suitMeta: Record<SuitId, SuitMeta>;
     })
   | (BaseSessionMessage & {
-      kind: "suit_named";
+      kind: "suit_meta";
       suitId: SuitId;
-      name: string;
+      meta: SuitMeta;
     })
   | (BaseSessionMessage & {
       kind: "leave_game";
@@ -130,5 +136,5 @@ export interface SessionUiHooks {
   onSnapshot: (snapshot: SessionSnapshot) => void;
   onAssignedPlayer: (playerId: string | undefined) => void;
   onGameStarted: (started: boolean) => void;
-  onSuitNamesChanged: (suitNames: Record<SuitId, string>) => void;
+  onSuitMetaChanged: (suitMeta: Record<SuitId, SuitMeta>) => void;
 }
