@@ -24,6 +24,7 @@ const initSessionBtn = getEl("initSessionBtn") as HTMLButtonElement | null;
 const startGameBtn = getEl("startGameBtn") as HTMLButtonElement | null;
 const requestSyncBtn = getEl("requestSyncBtn") as HTMLButtonElement | null;
 const playAgainBtn = getEl("playAgainBtn") as HTMLButtonElement | null;
+const homeBtn = getEl("homeBtn") as HTMLButtonElement | null;
 
 const friendlyNameInput = getEl("friendlyName") as HTMLInputElement | null;
 const hostBtn = getEl("hostBtn") as HTMLButtonElement | null;
@@ -760,6 +761,13 @@ if (leaveGameBtn) {
   });
 }
 
+if (homeBtn) {
+  homeBtn.addEventListener("click", () => {
+    clearStoredSession();
+    closeSession();
+  });
+}
+
 if (requestSyncBtn) {
   requestSyncBtn.addEventListener("click", () => {
     if (hostSession) {
@@ -879,6 +887,15 @@ if (storedSession) {
     });
   }
 }
+
+window.addEventListener("beforeunload", () => {
+  persistSession();
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    persistSession();
+  }
+});
 
 ensurePeerIdDefaultForRole();
 render();

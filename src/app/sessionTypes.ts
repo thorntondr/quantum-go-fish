@@ -41,6 +41,7 @@ interface BaseSessionMessage {
     | "peer_left"
     | "suit_named"
     | "leave_game"
+    | "join_reject"
     | "ping"
     | "pong";
 }
@@ -70,6 +71,10 @@ export type SessionMessage =
     })
   | (BaseSessionMessage & {
       kind: "leave_game";
+    })
+  | (BaseSessionMessage & {
+      kind: "join_reject";
+      reason: string;
     })
   | (BaseSessionMessage & {
       kind: "move_request";

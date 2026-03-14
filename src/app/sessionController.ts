@@ -394,6 +394,11 @@ export function createHostSession(
     connections.set(peerId, next);
     if (status === "closed" || status === "error") {
       if (existing?.clientId && existing.playerId && !snapshot.state.inactivePlayers.includes(existing.playerId)) {
+        for (const [clientKey, claim] of seatClaims.entries()) {
+          if (claim.playerId === existing.playerId) {
+            seatClaims.delete(clientKey);
+          }
+        }
         seatClaims.set(existing.clientId, {
           clientId: existing.clientId,
           playerId: existing.playerId,
@@ -424,11 +429,25 @@ export function createHostSession(
         (claim && claim.expiresAt > Date.now() && !snapshot.state.inactivePlayers.includes(claim.playerId)
           ? claim.playerId
           : undefined) ?? assignedByPeer.get(fromPeerId) ?? nextAssignablePlayer();
+      if (!assignedPlayerId || snapshot.state.inactivePlayers.includes(assignedPlayerId)) {
+        transport.send(
+          fromPeerId,
+          buildMessage(clientId, "join_reject", {
+            reason: "No available player slots to join."
+          })
+        );
+        return;
+      }
       const current = connections.get(fromPeerId) ?? {
         peerId: fromPeerId,
         status: "new",
         label: fromPeerId
       };
+      for (const [peerId, connection] of connections.entries()) {
+        if (peerId !== fromPeerId && connection.playerId === assignedPlayerId && connection.status === "reserved") {
+          connections.delete(peerId);
+        }
+      }
       const updated: ConnectionState = {
         ...current,
         clientId: message.fromClientId,
@@ -730,6 +749,17 @@ export function createPeerSession(
       }
       updateConnections();
       hooks.onLog(`Assigned player: ${assignedPlayerId ?? "(none)"}.`);
+      return;
+    }
+
+    if (message.kind === "join_reject") {
+      hooks.onSessionError(message.reason);
+      started = false;
+      hooks.onGameStarted(false);
+      hooks.onAssignedPlayer(undefined);
+      connections.clear();
+      updateConnections();
+      transport.close();
       return;
     }
 
