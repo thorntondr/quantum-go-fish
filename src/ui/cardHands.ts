@@ -70,17 +70,20 @@ function renderBand(
   suit: SuitId,
   suits: SuitId[],
   suitMeta: SuitMeta | undefined,
-  options: { includeCenter: boolean; includeName: boolean; includeCorners: boolean }
+  options: {
+    includeCenter: boolean;
+    includeName: boolean;
+    includeTopLeft: boolean;
+    includeBottomRight: boolean;
+  }
 ): string {
   const symbol = resolveSuitSymbol(suit, suits, suitMeta);
   const label = resolveSuitName(suitMeta);
   const color = resolveSuitColor(suitMeta);
-  const cornerHtml = options.includeCorners
-    ? `
-      <div class="band-corner band-corner--tl">${symbol}</div>
-      <div class="band-corner band-corner--br">${symbol}</div>
-    `
-    : "";
+  const cornerHtml = `
+      ${options.includeTopLeft ? `<div class="band-corner band-corner--tl">${symbol}</div>` : ""}
+      ${options.includeBottomRight ? `<div class="band-corner band-corner--br">${symbol}</div>` : ""}
+    `;
   const centerHtml = options.includeCenter
     ? `
       <div class="band-center">
@@ -104,7 +107,8 @@ function renderFrontCard(card: CardModel, suits: SuitId[], getSuitMeta: (id: Sui
     .map((suit) => renderBand(suit, suits, getSuitMeta(suit), {
       includeCenter: true,
       includeName: true,
-      includeCorners: true
+      includeTopLeft: true,
+      includeBottomRight: true
     }))
     .join("");
   return `
@@ -122,18 +126,21 @@ function renderBackCard(
   getSuitMeta: (id: SuitId) => SuitMeta | undefined
 ): string {
   const bands = card.bands.length > 0 ? card.bands : [suits[0] ?? ""];
-  const spineHtml = bands
+  const bandHtml = bands
     .filter((band) => band)
-    .map((suit) => {
-      const symbol = resolveSuitSymbol(suit, suits, getSuitMeta(suit));
-      const color = resolveSuitColor(getSuitMeta(suit));
-      return `<div class="spine-symbol" style="--band-color: ${color}">${symbol}</div>`;
-    })
+    .map((suit) =>
+      renderBand(suit, suits, getSuitMeta(suit), {
+        includeCenter: false,
+        includeName: false,
+        includeTopLeft: true,
+        includeBottomRight: false
+      })
+    )
     .join("");
   return `
     <div class="card card--back">
-      <div class="card-spine">
-        ${spineHtml}
+      <div class="card-bands">
+        ${bandHtml}
       </div>
     </div>
   `;
@@ -145,22 +152,27 @@ function renderCardStack(
   getSuitMeta: (id: SuitId) => SuitMeta | undefined
 ): string {
   if (cards.length === 0) {
-    return `<div class="card-stack card-stack--empty" style="--stack-count: 1;">
+    return `<div class="card-stack card-stack--empty" style="--stack-count: 1; --stack-offset: 26px;">
       <div class="card card--front">
         <div class="card-bands">
-          ${renderBand("", suits, undefined, { includeCenter: true, includeName: true, includeCorners: true })}
+          ${renderBand("", suits, undefined, {
+            includeCenter: true,
+            includeName: true,
+            includeTopLeft: true,
+            includeBottomRight: true
+          })}
         </div>
       </div>
     </div>`;
   }
 
   return `
-    <div class="card-stack" style="--stack-count: ${cards.length};">
+    <div class="card-stack" style="--stack-count: ${cards.length}; --stack-offset: 26px;">
       ${cards
         .map((card, index) => {
           const isFront = index === 0;
           const stackIndex = cards.length - 1 - index;
-          const offset = stackIndex * 12;
+          const offset = stackIndex * 26;
           const zIndex = 10 + (cards.length - index);
           const cardHtml = isFront ? renderFrontCard(card, suits, getSuitMeta) : renderBackCard(card, suits, getSuitMeta);
           return `<div class="card-slot" style="left: ${offset}px; z-index: ${zIndex};">
