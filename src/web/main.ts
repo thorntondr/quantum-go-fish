@@ -76,6 +76,7 @@ let currentRoomCode = "";
 let pendingSuitEdit: { suitId: string; move?: Move } | undefined;
 
 const STORAGE_KEY = "qgf-session-v1";
+const ENABLE_SESSION_RESTORE = false;
 const OKABE_ITO = ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"];
 const EMOJILIB_URL = "https://unpkg.com/emojilib@4.0.2/dist/emoji-en-US.json";
 let emojiKeywordMap: Record<string, string[]> | undefined;
@@ -261,6 +262,9 @@ function closeSuitOverlay(): void {
 }
 
 function loadStoredSession(): Record<string, unknown> | undefined {
+  if (!ENABLE_SESSION_RESTORE) {
+    return undefined;
+  }
   if (typeof localStorage === "undefined") {
     return undefined;
   }
@@ -294,6 +298,9 @@ function clearStoredSession(): void {
 }
 
 function persistSession(): void {
+  if (!ENABLE_SESSION_RESTORE) {
+    return;
+  }
   if (!hostSession && !peerSession) {
     return;
   }
@@ -1028,38 +1035,40 @@ if (roomParam && roomCodeInput) {
   roomCodeInput.value = roomParam;
 }
 
-const RESUME_WINDOW_MS = 2 * 60 * 1000;
-const storedSession = loadStoredSession();
-if (storedSession) {
-  const lastSeen = Number(storedSession.lastSeen ?? 0);
-  const hostCode = String(storedSession.hostCode ?? "");
-  const displayName = String(storedSession.displayName ?? "Player");
-  const role = storedSession.role === "host" ? "host" : storedSession.role === "peer" ? "peer" : undefined;
-  if (role && hostCode && Date.now() - lastSeen <= RESUME_WINDOW_MS) {
-    if (roomCodeInput && role === "peer") {
-      roomCodeInput.value = hostCode;
-    }
-    void initSession({
-      role,
-      hostCode,
-      localPeerId: role === "host" ? hostCode : randomPeerId(),
-      displayName,
-      resume: {
-        clientId: typeof storedSession.clientId === "string" ? storedSession.clientId : undefined,
-        snapshot: storedSession.snapshot as GameState | undefined,
-        sessionSeq: typeof storedSession.sessionSeq === "number" ? storedSession.sessionSeq : undefined,
-        started: Boolean(storedSession.started),
-        suitMeta: storedSession.suitMeta as Record<string, SuitMeta> | undefined,
-        seatClaims: storedSession.seatClaims as Array<{
-          clientId: string;
-          playerId: string;
-          expiresAt: number;
-          label: string;
-        }> | undefined
+if (ENABLE_SESSION_RESTORE) {
+  const RESUME_WINDOW_MS = 2 * 60 * 1000;
+  const storedSession = loadStoredSession();
+  if (storedSession) {
+    const lastSeen = Number(storedSession.lastSeen ?? 0);
+    const hostCode = String(storedSession.hostCode ?? "");
+    const displayName = String(storedSession.displayName ?? "Player");
+    const role = storedSession.role === "host" ? "host" : storedSession.role === "peer" ? "peer" : undefined;
+    if (role && hostCode && Date.now() - lastSeen <= RESUME_WINDOW_MS) {
+      if (roomCodeInput && role === "peer") {
+        roomCodeInput.value = hostCode;
       }
-    }).catch((error) => {
-      setSessionError(error instanceof Error ? error.message : String(error));
-    });
+      void initSession({
+        role,
+        hostCode,
+        localPeerId: role === "host" ? hostCode : randomPeerId(),
+        displayName,
+        resume: {
+          clientId: typeof storedSession.clientId === "string" ? storedSession.clientId : undefined,
+          snapshot: storedSession.snapshot as GameState | undefined,
+          sessionSeq: typeof storedSession.sessionSeq === "number" ? storedSession.sessionSeq : undefined,
+          started: Boolean(storedSession.started),
+          suitMeta: storedSession.suitMeta as Record<string, SuitMeta> | undefined,
+          seatClaims: storedSession.seatClaims as Array<{
+            clientId: string;
+            playerId: string;
+            expiresAt: number;
+            label: string;
+          }> | undefined
+        }
+      }).catch((error) => {
+        setSessionError(error instanceof Error ? error.message : String(error));
+      });
+    }
   }
 }
 
