@@ -55,7 +55,13 @@ let peerSession: PeerSession | undefined;
 let hostTransport: HostPeerJsTransport | undefined;
 let peerTransport: PeerPeerJsTransport | undefined;
 let playerLabelById = new Map<string, string>();
-let suitLabelById = new Map<string, string>();
+type SuitMeta = { name?: string; symbol?: string; color?: string };
+let suitMetaById = new Map<string, SuitMeta>();
+
+function extractEmoji(label: string): string | undefined {
+  const match = label.match(/\p{Extended_Pictographic}/u);
+  return match ? match[0] : undefined;
+}
 let playerStatusById = new Map<string, string>();
 let currentRoomCode = "";
 
@@ -122,15 +128,18 @@ function formatPlayer(playerId: string): string {
 }
 
 function updateSuitLabels(suitNames: Record<string, string>): void {
-  suitLabelById = new Map(Object.entries(suitNames));
+  suitMetaById = new Map();
+  for (const [suitId, name] of Object.entries(suitNames)) {
+    suitMetaById.set(suitId, { name, symbol: extractEmoji(name) });
+  }
 }
 
 function formatSuit(suitId: string): string {
-  return suitLabelById.get(suitId) ?? suitId;
+  return suitMetaById.get(suitId)?.name ?? suitId;
 }
 
 function maybePromptForSuitName(suitId: string): void {
-  if (suitLabelById.has(suitId)) {
+  if (suitMetaById.has(suitId)) {
     return;
   }
   const proposed = window.prompt(`Name suit ${suitId}:`);
@@ -148,6 +157,10 @@ function maybePromptForSuitName(suitId: string): void {
   if (peerSession) {
     peerSession.setSuitName(suitId, trimmed);
   }
+}
+
+function getSuitMeta(suitId: string): SuitMeta | undefined {
+  return suitMetaById.get(suitId);
 }
 
 function loadStoredSession(): Record<string, unknown> | undefined {
@@ -461,7 +474,12 @@ function renderRoster(connections: ConnectionState[]): void {
 }
 
 function render(): void {
-  renderState({ stateRoot, statusRoot }, state, formatPlayer, formatSuit);
+  renderState({ stateRoot, statusRoot }, state, {
+    formatPlayer,
+    formatSuit,
+    getSuitMeta,
+    localPlayerId: assignedPlayer
+  });
   renderLegalMoves(state);
   refreshControls(state);
   refreshPlayAgain(state);

@@ -163,9 +163,167 @@
       background: #f8fcf9;
     }
 
+    .hand-board {
+      display: grid;
+      gap: 18px;
+    }
+
+    .hands-other {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      justify-content: center;
+    }
+
+    .hands-self {
+      display: flex;
+      justify-content: center;
+    }
+
+    .hand {
+      --card-width: 170px;
+      --card-height: calc(var(--card-width) * 9 / 14);
+      --spine-width: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hand--self {
+      --card-width: 230px;
+      --spine-width: 34px;
+      padding: 10px 16px 18px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid #d8e2dc;
+      box-shadow: 0 12px 24px rgba(15, 46, 33, 0.1);
+    }
+
+    .hand-label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #2a4b3f;
+    }
+
+    .card-stack {
+      position: relative;
+      height: var(--card-height);
+      min-width: calc(var(--card-width) + (var(--stack-count, 1) - 1) * 12px);
+    }
+
+    .card-slot {
+      position: absolute;
+      top: 0;
+    }
+
+    .card {
+      height: var(--card-height);
+      border-radius: 14px;
+      border: 1px solid #b7c6be;
+      background: #fff;
+      box-shadow: 0 10px 20px rgba(16, 32, 26, 0.12);
+      overflow: hidden;
+      display: flex;
+    }
+
+    .card--front {
+      width: var(--card-width);
+    }
+
+    .card--back {
+      width: var(--spine-width);
+      background: #f5f6f7;
+    }
+
+    .card-bands,
+    .card-spine {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+    }
+
+    .card-band {
+      flex: 1;
+      position: relative;
+      background: var(--band-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-bottom: 1px solid rgba(16, 32, 26, 0.12);
+    }
+
+    .card-band:last-child {
+      border-bottom: none;
+    }
+
+    .band-corner {
+      position: absolute;
+      font-size: 0.85rem;
+      color: #26332e;
+      opacity: 0.9;
+    }
+
+    .band-corner--tl {
+      top: 6px;
+      left: 8px;
+    }
+
+    .band-corner--br {
+      bottom: 6px;
+      right: 8px;
+      transform: rotate(180deg);
+    }
+
+    .band-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      text-align: center;
+    }
+
+    .band-symbol {
+      font-size: 1.6rem;
+      line-height: 1;
+      color: #1a2a24;
+    }
+
+    .band-name {
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #23312c;
+    }
+
+    .spine-symbol {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--band-color);
+      color: #24302b;
+      font-size: 0.85rem;
+      border-bottom: 1px solid rgba(16, 32, 26, 0.12);
+    }
+
+    .spine-symbol:last-child {
+      border-bottom: none;
+    }
+
     @media (max-width: 960px) {
       .grid-2 {
         grid-template-columns: 1fr;
+      }
+      .hand {
+        --card-width: 150px;
+      }
+      .hand--self {
+        --card-width: 190px;
+      }
+      .card-stack {
+        min-width: calc(var(--card-width) + (var(--stack-count, 1) - 1) * 12px);
       }
     }
   </style>
