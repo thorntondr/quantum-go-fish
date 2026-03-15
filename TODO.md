@@ -23,3 +23,5 @@
 1. Peter says there should be a special message for meeting both win conditions at the same time
 1. Fix the bug where too many suits are crammed into too few cards.
     1. For example, if a player has three cards that could be any of three suits, but they can't have more than two cards of any suit. We hit a state kind of like this in a three-player game where we each had two cards fully collapsed, but of different suits.  For some reason, Peter was the only one to hit this bug.  I think Helen and I didn't have pairs, but two collapsed cards of different suits, maybe.  I also saw something similar happen running a game with 8 players playing randomly.  Someone ended showing six cards of the same suit. This is part of why I restored the paperclips table, so I would be able to tell if it was simply a problem with my rendering logic.  When we hit Peter's case later, we had the paperclips table in place and I was able to deduce that it was a problem with my suit allocation logic.
+1. Better UI to let you know when it's your turn to ask or answer
+1. Clearer indication of game over state
