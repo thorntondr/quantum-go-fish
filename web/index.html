@@ -351,6 +351,46 @@
       color: #23312c;
     }
 
+    .debug-table {
+      margin-top: 18px;
+      overflow-x: auto;
+      border-top: 1px dashed rgba(26, 50, 40, 0.2);
+      padding-top: 12px;
+    }
+
+    .debug-table table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      background: #ffffff;
+    }
+
+    .debug-table th,
+    .debug-table td {
+      border: 1px solid #c6d6cd;
+      padding: 6px 8px;
+      text-align: center;
+    }
+
+    .debug-table th {
+      background: #f3f7f5;
+      font-weight: 600;
+    }
+
+    .debug-table .impossible {
+      color: #a11a1a;
+      font-weight: 700;
+    }
+
+    .debug-table .ghost {
+      color: #7a8b84;
+    }
+
+    .debug-table .guaranteed {
+      color: #1d7a5a;
+      font-weight: 700;
+    }
+
     @media (max-width: 960px) {
       .grid-2 {
         grid-template-columns: 1fr;

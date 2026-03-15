@@ -1,5 +1,6 @@
 import { dispatchMove } from "../app/controller.js";
 import { renderCardHands, type SuitMeta } from "./cardHands.js";
+import { renderPaperclipTable } from "./paperclips.js";
 import type { GameState, Move } from "../engine/types.js";
 
 export interface UiBindings {
@@ -40,11 +41,18 @@ export function renderState(
       return label === suitId ? undefined : { name: label };
     });
 
-  bindings.stateRoot.innerHTML = renderCardHands(state, {
+  const cardHtml = renderCardHands(state, {
     formatPlayer,
     getSuitMeta,
     localPlayerId: options.localPlayerId
   });
+  const tableHtml = renderPaperclipTable(state, formatPlayer, options.formatSuit);
+  bindings.stateRoot.innerHTML = `
+    ${cardHtml}
+    <div class="debug-table">
+      ${tableHtml}
+    </div>
+  `;
   if (state.turnState.phase === "GameOver" && state.turnState.winner) {
     bindings.statusRoot.textContent =
       `Game Over. Winner: ${formatPlayer(state.turnState.winner)} (${formatWinReason(state.turnState.winReason)})`;
