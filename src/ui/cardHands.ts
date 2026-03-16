@@ -23,26 +23,130 @@ interface CardModel {
 function buildCardsForPlayer(state: GameState, playerId: PlayerId): CardModel[] {
   const total = state.handSizes[playerId] ?? 0;
   const cards: CardModel[] = Array.from({ length: total }, () => ({ bands: [] }));
-  let frontIndex = 0;
+  let fixedIndex = 0;
 
+  const remaining: Record<SuitId, number> = {};
   for (const suit of state.suits) {
-    const min = state.min[playerId]?.[suit] ?? 0;
-    const max = state.max[playerId]?.[suit] ?? 0;
-    const guaranteed = Math.max(0, min);
-    const possible = Math.max(0, max - min);
-
-    for (let i = 0; i < guaranteed && frontIndex < cards.length; i += 1) {
-      cards[frontIndex].bands.push(suit);
-      frontIndex += 1;
+    const min = Math.max(0, state.min[playerId]?.[suit] ?? 0);
+    const max = Math.max(0, state.max[playerId]?.[suit] ?? 0);
+    const guaranteed = Math.min(min, total - fixedIndex);
+    for (let i = 0; i < guaranteed && fixedIndex < cards.length; i += 1) {
+      cards[fixedIndex].bands = [suit];
+      fixedIndex += 1;
     }
+    remaining[suit] = Math.max(0, max - min);
+  }
 
-    for (let i = 0; i < possible; i += 1) {
-      const index = total - 1 - i;
-      if (index < 0 || index >= cards.length) {
+  const uncertain = cards.slice(fixedIndex);
+  const uncertainCount = uncertain.length;
+  if (uncertainCount === 0) {
+    return cards;
+  }
+
+  let remainingTotal = Object.values(remaining).reduce((acc, value) => acc + value, 0);
+  const minPerCard = 2;
+  const requiredTotal = uncertainCount * minPerCard;
+  let extras = Math.max(0, requiredTotal - remainingTotal);
+
+  if (state.suits.length >= 2) {
+    const byLeast = [...state.suits].sort((a, b) => remaining[a] - remaining[b]);
+    let positiveSuits = state.suits.filter((suit) => remaining[suit] > 0);
+    if (positiveSuits.length < 2) {
+      for (const suit of byLeast) {
+        if (remaining[suit] === 0 && extras > 0) {
+          remaining[suit] += 1;
+          extras -= 1;
+          positiveSuits = state.suits.filter((s) => remaining[s] > 0);
+          if (positiveSuits.length >= 2 || extras === 0) {
+            break;
+          }
+        }
+      }
+    }
+    if (positiveSuits.length < 2) {
+      const byMost = [...state.suits].sort((a, b) => remaining[b] - remaining[a]);
+      for (const suit of byLeast) {
+        if (remaining[suit] === 0) {
+          const donor = byMost.find((candidate) => remaining[candidate] > 1);
+          if (!donor) {
+            break;
+          }
+          remaining[donor] -= 1;
+          remaining[suit] += 1;
+          positiveSuits = state.suits.filter((s) => remaining[s] > 0);
+          if (positiveSuits.length >= 2) {
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  while (extras > 0) {
+    let targetSuit = state.suits[0];
+    for (const suit of state.suits) {
+      if (remaining[suit] < remaining[targetSuit]) {
+        targetSuit = suit;
+      }
+    }
+    remaining[targetSuit] += 1;
+    extras -= 1;
+  }
+
+  const pickSuit = (exclude: Set<SuitId>): SuitId | undefined => {
+    let best: SuitId | undefined;
+    for (const suit of state.suits) {
+      if (exclude.has(suit)) {
         continue;
       }
-      cards[index].bands.push(suit);
+      if (remaining[suit] <= 0) {
+        continue;
+      }
+      if (!best || remaining[suit] > remaining[best]) {
+        best = suit;
+      }
     }
+    return best;
+  };
+
+  for (const card of uncertain) {
+    const chosen = new Set<SuitId>();
+    for (let i = 0; i < minPerCard; i += 1) {
+      const suit = pickSuit(chosen);
+      if (!suit) {
+        break;
+      }
+      chosen.add(suit);
+      remaining[suit] -= 1;
+    }
+    card.bands = [...chosen];
+  }
+
+  while (true) {
+    let suitToPlace: SuitId | undefined;
+    for (const suit of state.suits) {
+      if (remaining[suit] > 0 && (!suitToPlace || remaining[suit] > remaining[suitToPlace])) {
+        suitToPlace = suit;
+      }
+    }
+    if (!suitToPlace) {
+      break;
+    }
+    let candidate: CardModel | undefined;
+    for (const card of uncertain) {
+      if (card.bands.includes(suitToPlace)) {
+        continue;
+      }
+      if (!candidate || card.bands.length < candidate.bands.length) {
+        candidate = card;
+      }
+    }
+    if (!candidate) {
+      remaining[suitToPlace] = 0;
+      continue;
+    }
+    candidate.bands.push(suitToPlace);
+    remaining[suitToPlace] -= 1;
   }
 
   return cards;
@@ -101,7 +205,16 @@ function renderBand(
 }
 
 function renderFrontCard(card: CardModel, suits: SuitId[], getSuitMeta: (id: SuitId) => SuitMeta | undefined): string {
-  const bands = card.bands.length > 0 ? card.bands : [suits[0] ?? ""];
+  if (card.bands.length === 0) {
+    return `
+      <div class="card card--front card--blank">
+        <div class="card-bands">
+          <div class="card-band card-band--blank"></div>
+        </div>
+      </div>
+    `;
+  }
+  const bands = card.bands;
   const bandHtml = bands
     .filter((band) => band)
     .map((suit) => renderBand(suit, suits, getSuitMeta(suit), {
@@ -125,7 +238,16 @@ function renderBackCard(
   suits: SuitId[],
   getSuitMeta: (id: SuitId) => SuitMeta | undefined
 ): string {
-  const bands = card.bands.length > 0 ? card.bands : [suits[0] ?? ""];
+  if (card.bands.length === 0) {
+    return `
+      <div class="card card--back card--blank">
+        <div class="card-bands">
+          <div class="card-band card-band--blank"></div>
+        </div>
+      </div>
+    `;
+  }
+  const bands = card.bands;
   const bandHtml = bands
     .filter((band) => band)
     .map((suit) =>
@@ -153,14 +275,9 @@ function renderCardStack(
 ): string {
   if (cards.length === 0) {
     return `<div class="card-stack card-stack--empty" style="--stack-count: 1; --stack-offset: 26px;">
-      <div class="card card--front">
+      <div class="card card--front card--blank">
         <div class="card-bands">
-          ${renderBand("", suits, undefined, {
-            includeCenter: true,
-            includeName: true,
-            includeTopLeft: true,
-            includeBottomRight: true
-          })}
+          <div class="card-band card-band--blank"></div>
         </div>
       </div>
     </div>`;
