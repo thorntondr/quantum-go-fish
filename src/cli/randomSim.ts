@@ -17,6 +17,16 @@ type MatchDetails = {
   rhs: number;
 };
 
+type FailurePayload = {
+  error: string;
+  config: SetupConfig;
+  sequence: number;
+  failingMove: Move;
+  stateBefore: GameState;
+  actionsBefore: ActionRecord[];
+  legalMoves: Move[];
+};
+
 function randomInt(minInclusive: number, maxInclusive: number): number {
   const span = maxInclusive - minInclusive + 1;
   return minInclusive + Math.floor(Math.random() * span);
@@ -125,12 +135,27 @@ function run(): void {
       }
 
       const move = legalMoves[randomInt(0, legalMoves.length - 1)];
-      actions.push({
+      const action: ActionRecord = {
         sequence: actions.length + 1,
         actor: actorForMove(move),
         move
-      });
-      state = applyMove(state, move);
+      };
+      try {
+        state = applyMove(state, move);
+        actions.push(action);
+      } catch (error) {
+        const payload: FailurePayload = {
+          error: error instanceof Error ? error.message : String(error),
+          config,
+          sequence: action.sequence,
+          failingMove: action.move,
+          stateBefore: state,
+          actionsBefore: actions,
+          legalMoves
+        };
+        console.log(JSON.stringify(payload, null, 2));
+        throw error;
+      }
 
       const match = evaluateCondition(state);
       if (match) {
