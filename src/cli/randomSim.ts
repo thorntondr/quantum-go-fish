@@ -11,7 +11,7 @@ type ActionRecord = {
 
 type MatchDetails = {
   player: PlayerId;
-  unknownSuitCount: number;
+  unknownSuitSum: number;
   hand: number;
   minSum: number;
   rhs: number;
@@ -35,7 +35,7 @@ function suitLabel(index: number): string {
 }
 
 function randomConfig(): SetupConfig {
-  const playerCount = randomInt(2, 8);
+  const playerCount = randomInt(2, 4);
   const players = Array.from({ length: playerCount }, (_, i) => playerLabel(i));
   const suits = Array.from({ length: playerCount }, (_, i) => suitLabel(i));
   const suitTotals: Record<string, number> = Object.fromEntries(suits.map((suit) => [suit, 4]));
@@ -87,21 +87,19 @@ function evaluateCondition(state: GameState): MatchDetails | undefined {
       continue;
     }
 
-    let unknownSuitCount = 0;
+    let unknownSuitSum = 0;
     let minSum = 0;
     for (const suit of state.suits) {
       const minValue = state.min[player][suit];
       const maxValue = state.max[player][suit];
       minSum += minValue;
-      if (maxValue - minValue > 0) {
-        unknownSuitCount += 1;
-      }
+      unknownSuitSum += maxValue - minValue;
     }
 
     const hand = state.handSizes[player];
     const rhs = 2 * (hand - minSum);
-    if (unknownSuitCount < rhs) {
-      return { player, unknownSuitCount, hand, minSum, rhs };
+    if (unknownSuitSum < rhs) {
+      return { player, unknownSuitSum, hand, minSum, rhs };
     }
   }
 
@@ -139,7 +137,7 @@ function run(): void {
         const payload = {
           matchingPlayer: match.player,
           matchingPlayerStats: {
-            unknownSuitCount: match.unknownSuitCount,
+            unknownSuitSum: match.unknownSuitSum,
             hand: match.hand,
             minSum: match.minSum,
             rhs: match.rhs
