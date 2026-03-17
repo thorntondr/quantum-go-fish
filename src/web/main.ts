@@ -9,6 +9,7 @@ import { renderState } from "../ui/interaction.js";
 
 const stateRoot = requireEl("state");
 const statusRoot = requireEl("status");
+const pendingAskNotice = getEl("pendingAskNotice");
 const pauseNotice = getEl("pauseNotice");
 const sessionErrorRoot = requireEl("sessionError");
 const moveErrorRoot = requireEl("moveError");
@@ -154,6 +155,21 @@ function updateSuitLabels(suitMeta: Record<string, SuitMeta>): void {
 
 function formatSuit(suitId: string): string {
   return suitMetaById.get(suitId)?.name ?? suitId;
+}
+
+function refreshPendingAskNotice(current: GameState): void {
+  if (!pendingAskNotice) {
+    return;
+  }
+  const pending = current.turnState.pendingAsk;
+  if (!pending) {
+    pendingAskNotice.textContent = "";
+    pendingAskNotice.hidden = true;
+    return;
+  }
+  pendingAskNotice.textContent =
+    `${formatPlayer(pending.asker)} is asking ${formatPlayer(pending.target)} about ${formatSuit(pending.suit)}.`;
+  pendingAskNotice.hidden = false;
 }
 
 function getSuitMeta(suitId: string): SuitMeta | undefined {
@@ -591,6 +607,7 @@ function render(): void {
     localPlayerId: assignedPlayer,
     highlightedPlayerId: selectedAskTarget
   });
+  refreshPendingAskNotice(state);
   renderLegalMoves(state);
   refreshPlayAgain(state);
   refreshPauseNotice(state);

@@ -8,7 +8,7 @@
 - [ ] Better UI to let you know when it's your turn to ask or answer
 - [ ] Clearer indication of game over state
 - [ ] The turn order should be apparant from the layout of the players' hands.  They currently just show in turn order, starting with the Host (or second player on the Host's UI).
-- [ ] When answering a question, the question being asked should be more clearly displayed.  In single_device_ui.html there is no indication at all what the question is.
+- [x] When answering a question, the question being asked should be more clearly displayed.  In single_device_ui.html there is no indication at all what the question is.
 - [ ] Optional rules variants to try, controllable by host via check list in waiting room. Can be implemented one at a time.
     - [ ] Max 3: All player's per-suit maximums start at 3 instead of 4.  This means that you will need to acquire at least one card from an opponent to get four of a kind.
     - [ ] All or nothing: When answering "Yes," you must transfer all of your cards of that suit.  This means that in addition to saying "Yes," you must also pick a number in the range [min, max].

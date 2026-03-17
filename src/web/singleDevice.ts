@@ -11,6 +11,7 @@ const EMOJILIB_URL = "https://unpkg.com/emojilib@4.0.2/dist/emoji-en-US.json";
 let emojiKeywordMap: Record<string, string[]> | undefined;
 
 const statusRoot = requireEl("status");
+const pendingAskNotice = getEl("pendingAskNotice");
 const errorRoot = requireEl("error");
 const stateRoot = requireEl("state");
 const rosterInput = requireEl("rosterInput") as HTMLTextAreaElement;
@@ -141,6 +142,20 @@ function formatSuit(suitId: string): string {
 
 function formatPlayer(playerId: string): string {
   return playerId;
+}
+
+function refreshPendingAskNotice(current: GameState): void {
+  if (!pendingAskNotice) {
+    return;
+  }
+  const pending = current.turnState.pendingAsk;
+  if (!pending) {
+    pendingAskNotice.textContent = "";
+    pendingAskNotice.hidden = true;
+    return;
+  }
+  pendingAskNotice.textContent = `${pending.asker} is asking ${pending.target} about ${formatSuit(pending.suit)}.`;
+  pendingAskNotice.hidden = false;
 }
 
 function openSuitOverlay(suitId: string, move?: Move): void {
@@ -302,6 +317,10 @@ function refreshControls(current: GameState): void {
 
 function render(): void {
   if (!state) {
+    if (pendingAskNotice) {
+      pendingAskNotice.textContent = "";
+      pendingAskNotice.hidden = true;
+    }
     return;
   }
   if (state.turnState.pendingAsk) {
@@ -326,6 +345,7 @@ function render(): void {
       highlightedPlayerId: selectedAskTarget
     }
   );
+  refreshPendingAskNotice(state);
 }
 
 startBtn.addEventListener("click", () => {

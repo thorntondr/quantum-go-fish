@@ -63,6 +63,16 @@ p {
   margin: 4px 0;
 }
 
+.callout {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border: 1px solid #b9d9cb;
+  border-radius: 10px;
+  background: #edf8f2;
+  color: #15543f;
+  font-weight: 600;
+}
+
 .controls-row {
   display: flex;
   flex-wrap: wrap;
