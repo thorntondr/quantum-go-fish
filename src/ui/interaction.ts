@@ -13,6 +13,7 @@ export interface RenderOptions {
   formatSuit?: (suitId: string) => string;
   getSuitMeta?: (suitId: string) => SuitMeta | undefined;
   localPlayerId?: string;
+  highlightedPlayerId?: string;
 }
 
 function formatWinReason(reason?: string): string {
@@ -44,7 +45,8 @@ export function renderState(
   const cardHtml = renderCardHands(state, {
     formatPlayer,
     getSuitMeta,
-    localPlayerId: options.localPlayerId
+    localPlayerId: options.localPlayerId,
+    highlightedPlayerId: options.highlightedPlayerId
   });
   const tableHtml = renderPaperclipTable(state, formatPlayer, options.formatSuit);
   bindings.stateRoot.innerHTML = `

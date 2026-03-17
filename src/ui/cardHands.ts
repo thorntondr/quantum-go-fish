@@ -10,6 +10,7 @@ export interface RenderCardsOptions {
   formatPlayer: (playerId: PlayerId) => string;
   getSuitMeta: (suitId: SuitId) => SuitMeta | undefined;
   localPlayerId?: PlayerId;
+  highlightedPlayerId?: PlayerId;
 }
 
 const DEFAULT_SUIT_SYMBOLS = ["◼", "▲", "◆", "●", "⬟", "⬣", "★", "✚"];
@@ -261,7 +262,7 @@ function renderCardStack(
 }
 
 export function renderCardHands(state: GameState, options: RenderCardsOptions): string {
-  const { formatPlayer, getSuitMeta, localPlayerId } = options;
+  const { formatPlayer, getSuitMeta, localPlayerId, highlightedPlayerId } = options;
   const otherPlayers = state.players.filter((player) => player !== localPlayerId);
 
   return `
@@ -270,8 +271,10 @@ export function renderCardHands(state: GameState, options: RenderCardsOptions): 
         ${ (localPlayerId ? otherPlayers : state.players)
           .map((playerId) => {
             const cards = buildCardsForPlayer(state, playerId);
+            const isHighlighted = highlightedPlayerId === playerId;
+            const handClass = ["hand", isHighlighted ? "hand--highlight" : ""].filter(Boolean).join(" ");
             return `
-              <section class="hand">
+              <section class="${handClass}">
                 <div class="hand-label">${formatPlayer(playerId)}</div>
                 ${renderCardStack(cards, state.suits, getSuitMeta)}
               </section>

@@ -34,6 +34,7 @@ let state: GameState | undefined;
 let suitMetaById = new Map<string, SuitMeta>();
 let pendingSuitEdit: { suitId: string; move?: Move } | undefined;
 let viewPlayerId: string | undefined;
+let selectedAskTarget: string | undefined;
 
 function byId(id: string): HTMLElement {
   const node = document.getElementById(id);
@@ -283,12 +284,13 @@ function refreshControls(current: GameState): void {
     targets.includes(askTarget.value) && askTarget.value ? askTarget.value : (targets[0] ?? "");
   askTarget.innerHTML = targets.map((target) => `<option value="${target}">${target}</option>`).join("");
   askTarget.value = selectedTarget;
+  const askEnabled = !pending && askMoves.length > 0;
+  selectedAskTarget = askEnabled ? selectedTarget : undefined;
 
   const suits = askMoves.filter((m) => m.target === selectedTarget).map((m) => m.suit);
   askSuit.innerHTML = suits.map((suit) => `<option value="${suit}">${formatSuit(suit)}</option>`).join("");
   askSuit.value = suits[0] ?? "";
 
-  const askEnabled = !pending && askMoves.length > 0;
   askTarget.disabled = !askEnabled;
   askSuit.disabled = !askEnabled;
   askBtn.disabled = !askEnabled;
@@ -312,6 +314,7 @@ function render(): void {
     : `Turn: ${state.turnState.currentPlayer}`;
   statusRoot.textContent = `${statusLine} Viewing: ${viewPlayerId ?? "-"}.`;
 
+  refreshControls(state);
   renderState(
     { stateRoot, statusRoot },
     state,
@@ -319,10 +322,10 @@ function render(): void {
       formatPlayer,
       formatSuit,
       getSuitMeta,
-      localPlayerId: viewPlayerId
+      localPlayerId: viewPlayerId,
+      highlightedPlayerId: selectedAskTarget
     }
   );
-  refreshControls(state);
 }
 
 startBtn.addEventListener("click", () => {
@@ -355,6 +358,10 @@ askBtn.addEventListener("click", () => {
     return;
   }
   submitMove(move);
+});
+
+askTarget.addEventListener("change", () => {
+  render();
 });
 
 yesBtn.addEventListener("click", () => {

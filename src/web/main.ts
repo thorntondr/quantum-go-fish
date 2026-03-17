@@ -75,6 +75,7 @@ function extractEmoji(label: string): string | undefined {
 let playerStatusById = new Map<string, string>();
 let currentRoomCode = "";
 let pendingSuitEdit: { suitId: string; move?: Move } | undefined;
+let selectedAskTarget: string | undefined;
 
 const STORAGE_KEY = "qgf-session-v1";
 const ENABLE_SESSION_RESTORE = false;
@@ -496,6 +497,7 @@ function refreshControls(current: GameState): void {
     .map((target) => `<option value="${target}">${formatPlayer(target)}</option>`)
     .join("");
   askTarget.value = selectedTarget;
+  selectedAskTarget = askAllowed ? selectedTarget : undefined;
 
   const suits = askMoves.filter((m) => m.target === selectedTarget).map((m) => m.suit);
   askSuit.innerHTML = suits.map((suit) => `<option value="${suit}">${formatSuit(suit)}</option>`).join("");
@@ -581,14 +583,15 @@ function renderRoster(connections: ConnectionState[]): void {
 }
 
 function render(): void {
+  refreshControls(state);
   renderState({ stateRoot, statusRoot }, state, {
     formatPlayer,
     formatSuit,
     getSuitMeta,
-    localPlayerId: assignedPlayer
+    localPlayerId: assignedPlayer,
+    highlightedPlayerId: selectedAskTarget
   });
   renderLegalMoves(state);
-  refreshControls(state);
   refreshPlayAgain(state);
   refreshPauseNotice(state);
 }
@@ -1018,6 +1021,10 @@ askBtn.addEventListener("click", () => {
     return;
   }
   submitMove(move);
+});
+
+askTarget.addEventListener("change", () => {
+  render();
 });
 
 yesBtn.addEventListener("click", () => {
