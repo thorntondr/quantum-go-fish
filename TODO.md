@@ -1,30 +1,14 @@
-1. Test disconnection
-    1. What happens when someone accidentally hits the back button or exits their browser app?
-    1. What if a player actually wants to leave the game?
-1. Test mobile
-    1. So far all of my tests have been different tabs in desktop Edge on the same machine that's hosting.  I should be able to access it from my phone using the local IP address.
-1. Let players leave before the game starts
-    1. Remove them from the roster
-1. Add a button to take you back to the landing page
-    1. What should it be called?
-    1. Should this be separate from the waiting room exit button?
-    1. Should this maintain connection to a game in progress, or disconnect?
-1. Come up with a better way to show the game state
-    1. It should feel like an actual game.
-    1. Research what other mobile recreations of card games look like
-    1. Actions for choosing player to ask and suit to ask for need to be more interesting than a drop-down, but still simple and quick.
-    1. When I'm choosing who to ask, the currently selected player's hand should be highlighted somehow (larger or outlined or something)
+1. Revisit disconnection design
+    1. BUG: When we tried to host from the family PC or from Peter's chromebook, the other of the two was not able to join.  It appeared to put them in another room (see above).
+1. "Return Home" and "Leave Game" buttons seem redundant.  Consider reworking this part of the design.
+1. When I'm choosing who to ask, the currently selected target player's hand should be highlighted somehow (larger or outlined or something)
 1. Add an info button that shows full instructions on how to play the game
-1. BUG: When we tried to host from the family PC or from Peter's chromebook, the other of the two was not able to join.  It appeared to put them in another room (see above).
 1. BUG: If I type in another host's room id and press "Host" it opens a new room with the same id.
     1. Consider removing the ability for the Host to choose their own room code.
-1. WIP: Add a share button/link to the waiting room that you can send to friends to join the room
 1. Peter says there should be a special message for meeting both win conditions at the same time
-1. Fix the bug where too many suits are crammed into too few cards.
-    1. For example, if a player has three cards that could be any of three suits, but they can't have more than two cards of any suit. We hit a state kind of like this in a three-player game where we each had two cards fully collapsed, but of different suits.  For some reason, Peter was the only one to hit this bug.  I think Helen and I didn't have pairs, but two collapsed cards of different suits, maybe.  I also saw something similar happen running a game with 8 players playing randomly.  Someone ended showing six cards of the same suit. This is part of why I restored the paperclips table, so I would be able to tell if it was simply a problem with my rendering logic.  When we hit Peter's case later, we had the paperclips table in place and I was able to deduce that it was a problem with my suit allocation logic.
 1. Better UI to let you know when it's your turn to ask or answer
 1. Clearer indication of game over state
-1. The turn order should be apparant from the layout of the players' hands.
+1. The turn order should be apparant from the layout of the players' hands.  They currently just show in turn order, starting with the Host (or second player on the Host's UI).
 1. When answering a question, the question being asked should be more clearly displayed.  In single_device_ui.html there is no indication at all what the question is.
 1. Optional rules variants to try, controllable by host via check list in waiting room. Can be implemented one at a time.
     1. Max 3: All player's per-suit maximums start at 3 instead of 4.  This means that you will need to acquire at least one card from an opponent to get four of a kind.
