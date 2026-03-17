@@ -26,3 +26,9 @@
 1. Clearer indication of game over state
 1. The turn order should be apparant from the layout of the players' hands.
 1. When answering a question, the question being asked should be more clearly displayed.  In single_device_ui.html there is no indication at all what the question is.
+1. Optional rules variants to try, controllable by host via check list in waiting room. Can be implemented one at a time.
+    1. Max 3: All player's per-suit maximums start at 3 instead of 4.  This means that you will need to acquire at least one card from an opponent to get four of a kind.
+    1. All or nothing: When answering "Yes," you must transfer all of your cards of that suit.  This means that in addition to saying "Yes," you must also pick a number in the range [min, max].
+    1. Draw Pile: Add one extra suit to the deck and a draw pile of four cards.  When an oppoent says "No," you have to go fish.  The draw pile can be tracked in the game state and display as if it were an extra player, but it does not take turns.
+        1. How is the transfer accomplished?  Is one of the draw pile's potential suits randomly selected and collapsed before transfer?  Is there some way to transfer the possibilities of a card instead?
+1. In the "Customize Suit" modal dialog, the 'Color' button just shows a horizontal line.  It would be cool if it showed the selected (initially default) color.
