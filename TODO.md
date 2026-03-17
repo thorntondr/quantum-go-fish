@@ -19,5 +19,5 @@
 - [x] Fix the single-device status line so its custom "awaiting answer" and "viewing player" message is not overwritten by the shared renderer.
 - [ ] Remove unused `SessionMessage` and `PeerStatus` declarations from `src/app/sessionController.ts`.
 - [ ] Remove or wire up unused UI/session helpers such as `src/ui/turnController.ts`, `src/ui/interaction.ts`'s exported `submitMove`, and the write-only `peerByClient` map if it is not needed.
-- [ ] Decide whether `web/debug.html` should remain supported by `src/web/main.ts`, and either align it with the shared UI contract/styles or retire it.
+- [x] Decide whether `web/debug.html` should remain supported by `src/web/main.ts`, and either align it with the shared UI contract/styles or retire it.
 - [x] Add session-controller tests for `leave_game`, reconnect and seat-claim expiry, and `restartGame()` clearing per-game metadata.

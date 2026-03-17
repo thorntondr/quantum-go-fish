@@ -16,15 +16,6 @@ const sessionErrorRoot = requireEl("sessionError");
 const moveErrorRoot = requireEl("moveError");
 const legalMoves = requireEl("legalMoves");
 const eventLogRoot = requireEl("eventLog");
-const rosterRoot = getEl("roster");
-
-const roleSelect = getEl("role") as HTMLSelectElement | null;
-const displayNameInput = getEl("displayName") as HTMLInputElement | null;
-const hostCodeInput = getEl("hostCode") as HTMLInputElement | null;
-const localPeerIdInput = getEl("localPeerId") as HTMLInputElement | null;
-const initSessionBtn = getEl("initSessionBtn") as HTMLButtonElement | null;
-const startGameBtn = getEl("startGameBtn") as HTMLButtonElement | null;
-const requestSyncBtn = getEl("requestSyncBtn") as HTMLButtonElement | null;
 const playAgainBtn = getEl("playAgainBtn") as HTMLButtonElement | null;
 const homeBtn = getEl("homeBtn") as HTMLButtonElement | null;
 
@@ -349,7 +340,7 @@ function persistSession(): void {
   const role = hostSession ? "host" : "peer";
   const clientId = hostSession ? hostSession.getClientId() : peerSession?.getClientId();
   const displayName = friendlyNameInput?.value.trim() || "Player";
-  const hostCode = currentRoomCode || roomCodeInput?.value.trim() || hostCodeInput?.value.trim() || "";
+  const hostCode = currentRoomCode || roomCodeInput?.value.trim() || "";
   const payload: Record<string, unknown> = {
     role,
     clientId,
@@ -403,28 +394,6 @@ function buildConfig(playerCount: number): SetupConfig {
     handSizes,
     startingPlayer: players[0]
   };
-}
-
-function ensurePeerIdDefaultForRole(): void {
-  if (!roleSelect || !localPeerIdInput || !hostCodeInput) {
-    return;
-  }
-  const role = roleSelect.value;
-  const currentPeerId = localPeerIdInput.value.trim();
-  const currentHostCode = hostCodeInput.value.trim();
-  if (!currentHostCode) {
-    hostCodeInput.value = `qgf-${Math.floor(Math.random() * 100000)}`;
-  }
-  if (role === "host") {
-    const hostCode = hostCodeInput.value.trim();
-    if (!currentPeerId || currentPeerId.startsWith("peer-") || currentPeerId === "host") {
-      localPeerIdInput.value = hostCode || "qgf-host";
-    }
-    return;
-  }
-  if (!currentPeerId || currentPeerId === hostCodeInput.value.trim()) {
-    localPeerIdInput.value = `peer-${Math.floor(Math.random() * 10000)}`;
-  }
 }
 
 function legalAsks(current: GameState, asker: string): Move[] {
@@ -549,12 +518,6 @@ function refreshControls(current: GameState): void {
   yesBtn.disabled = !answers.yes;
   noBtn.disabled = !answers.no;
 
-  if (roleSelect && startGameBtn) {
-    startGameBtn.disabled = roleSelect.value !== "host" || !hostSession;
-  }
-  if (requestSyncBtn) {
-    requestSyncBtn.disabled = !hostSession && !peerSession;
-  }
   if (waitingStartGameBtn) {
     waitingStartGameBtn.disabled = !hostSession;
   }
@@ -592,15 +555,6 @@ function renderRoster(connections: ConnectionState[]): void {
   for (const connection of connections) {
     if (connection.playerId) {
       playerStatusById.set(connection.playerId, connection.status);
-    }
-  }
-  if (rosterRoot) {
-    if (connections.length === 0) {
-      rosterRoot.textContent = "No connections.";
-    } else {
-      rosterRoot.textContent = connections
-        .map((c) => `${c.peerId.padEnd(8)}  ${c.label.padEnd(10)}  ${String(c.playerId ?? "-").padEnd(3)}  ${c.status}`)
-        .join("\n");
     }
   }
   if (waitingRoster) {
@@ -691,9 +645,6 @@ function closeSession(): void {
   currentRole = undefined;
   assignedPlayer = undefined;
   gameStarted = false;
-  if (rosterRoot) {
-    rosterRoot.textContent = "No connections.";
-  }
   if (waitingRoster) {
     waitingRoster.innerHTML = "<li class=\"roster-item\">No connected players yet.</li>";
   }
@@ -786,12 +737,6 @@ async function initSession(options: {
   if (options.role === "host") {
     hostTransport = new HostPeerJsTransport(localPeerId);
     hostTransport.onReady((id) => {
-      if (hostCodeInput) {
-        hostCodeInput.value = id;
-      }
-      if (localPeerIdInput) {
-        localPeerIdInput.value = id;
-      }
       if (roomCodeInput) {
         roomCodeInput.value = id;
       }
@@ -812,9 +757,6 @@ async function initSession(options: {
   } else {
     peerTransport = new PeerPeerJsTransport(hostCode, localPeerId);
     peerTransport.onReady((id) => {
-      if (localPeerIdInput) {
-        localPeerIdInput.value = id;
-      }
       appendLog(`Peer ID ready: ${id}`);
     });
     peerSession = createPeerSession(sessionHooks(), {
@@ -840,23 +782,6 @@ function submitMove(move: Move): void {
     return;
   }
   setMoveError("Session is not initialized.");
-}
-
-if (initSessionBtn && roleSelect && hostCodeInput && localPeerIdInput) {
-  initSessionBtn.addEventListener("click", () => {
-    void initSession({
-      role: roleSelect.value as SessionRole,
-      hostCode: hostCodeInput.value,
-      localPeerId: localPeerIdInput.value,
-      displayName: displayNameInput?.value ?? "Player"
-    }).catch((error) => {
-      setSessionError(error instanceof Error ? error.message : String(error));
-    });
-  });
-  roleSelect.addEventListener("change", () => {
-    ensurePeerIdDefaultForRole();
-    render();
-  });
 }
 
 if (hostBtn && friendlyNameInput) {
@@ -896,16 +821,6 @@ if (joinBtn && friendlyNameInput && roomCodeInput) {
   });
 }
 
-if (startGameBtn) {
-  startGameBtn.addEventListener("click", () => {
-    if (!hostSession) {
-      setSessionError("Host session is not initialized.");
-      return;
-    }
-    hostSession.startGame();
-  });
-}
-
 if (waitingStartGameBtn) {
   waitingStartGameBtn.addEventListener("click", () => {
     if (!hostSession) {
@@ -942,22 +857,6 @@ if (homeBtn) {
   homeBtn.addEventListener("click", () => {
     clearStoredSession();
     closeSession();
-  });
-}
-
-if (requestSyncBtn) {
-  requestSyncBtn.addEventListener("click", () => {
-    if (hostSession) {
-      hostSession.requestSync();
-      appendLog("Host broadcasted sync response.");
-      return;
-    }
-    if (peerSession) {
-      peerSession.requestSync();
-      appendLog("Peer requested sync.");
-      return;
-    }
-    setSessionError("No session initialized.");
   });
 }
 
@@ -1138,5 +1037,4 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
-ensurePeerIdDefaultForRole();
 render();
