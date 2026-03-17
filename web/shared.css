@@ -92,6 +92,10 @@ textarea {
   color: var(--ink);
 }
 
+input#suitColorInput {
+  padding: 1px;
+}
+
 textarea {
   width: 100%;
   min-height: 84px;
