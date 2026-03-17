@@ -421,3 +421,280 @@ test("Host session ignores attempts to change an already-named suit", () => {
   assert.ok(last && last.kind === "suit_meta");
   assert.equal(last.meta.name, "Stars");
 });
+
+test("Host session marks a leaving player inactive and rejects reclaiming that seat", () => {
+  const transport = new MockHostTransport();
+  const host = createHostSession(
+    { setup: setupConfig2() },
+    {},
+    {
+      transport,
+      clientId: "host-client",
+      displayName: "Host"
+    }
+  );
+
+  transport.emitPeerState("peer-1", "open");
+  transport.emitFrom("peer-1", buildMessage("peer-client", "hello", { displayName: "Remote" }));
+  host.startGame();
+
+  transport.emitFrom("peer-1", buildMessage("peer-client", "leave_game", {}));
+
+  assert.deepEqual(host.getSnapshot().state.inactivePlayers, ["B"]);
+  assert.equal(host.getConnections().find((row) => row.peerId === "peer-1")?.status, "inactive");
+  assert.equal(transport.messagesFor("peer-1").some((m) => m.kind === "peer_left"), true);
+
+  transport.emitPeerState("peer-2", "open");
+  transport.emitFrom("peer-2", buildMessage("peer-client", "hello", { displayName: "Remote Rejoin" }));
+
+  const rejoinMessages = transport.messagesFor("peer-2");
+  const reject = rejoinMessages.find((m) => m.kind === "join_reject");
+  assert.ok(reject && reject.kind === "join_reject");
+  assert.equal(reject.reason, "No available player slots to join.");
+});
+
+test("Disconnecting an answer target reserves the seat and preserves the pending ask", () => {
+  const originalRandom = Math.random;
+  Math.random = () => 0;
+
+  try {
+    const transport = new MockHostTransport();
+    const host = createHostSession(
+      { setup: setupConfig2() },
+      {},
+      {
+        transport,
+        clientId: "host-client",
+        displayName: "Host"
+      }
+    );
+
+    transport.emitPeerState("peer-1", "open");
+    transport.emitFrom("peer-1", buildMessage("peer-client", "hello", { displayName: "Remote" }));
+    host.startGame();
+    host.submitMove({ kind: "Ask", asker: "A", target: "B", suit: "S" });
+
+    transport.emitPeerState("peer-1", "closed");
+
+    const pending = host.getSnapshot().state.turnState.pendingAsk;
+    assert.ok(pending);
+    assert.equal(pending.asker, "A");
+    assert.equal(pending.target, "B");
+    assert.deepEqual(host.getSnapshot().state.inactivePlayers, []);
+    assert.equal(host.getConnections().find((row) => row.peerId === "peer-1")?.status, "reserved");
+
+    const claims = host.getSeatClaims();
+    assert.equal(claims.length, 1);
+    assert.equal(claims[0]?.playerId, "B");
+    assert.equal(transport.messagesFor("peer-1").some((m) => m.kind === "peer_left"), true);
+  } finally {
+    Math.random = originalRandom;
+  }
+});
+
+test("Reconnect within the claim window restores the same player seat and sends game state", () => {
+  const originalRandom = Math.random;
+  Math.random = () => 0;
+
+  try {
+    const transport = new MockHostTransport();
+    const host = createHostSession(
+      { setup: setupConfig2() },
+      {},
+      {
+        transport,
+        clientId: "host-client",
+        displayName: "Host"
+      }
+    );
+
+    transport.emitPeerState("peer-1", "open");
+    transport.emitFrom("peer-1", buildMessage("peer-client", "hello", { displayName: "Remote" }));
+    host.startGame();
+    host.submitMove({ kind: "Ask", asker: "A", target: "B", suit: "S" });
+    transport.emitPeerState("peer-1", "closed");
+
+    transport.emitPeerState("peer-2", "open");
+    transport.emitFrom("peer-2", buildMessage("peer-client", "hello", { displayName: "Remote Rejoin" }));
+
+    assert.equal(host.getSeatClaims().length, 0);
+    assert.equal(host.getConnections().some((row) => row.peerId === "peer-1"), false);
+    const rejoined = host.getConnections().find((row) => row.peerId === "peer-2");
+    assert.ok(rejoined);
+    assert.equal(rejoined.playerId, "B");
+
+    const rejoinMessages = transport.messagesFor("peer-2");
+    const welcome = rejoinMessages.find((m) => m.kind === "welcome");
+    const startGame = rejoinMessages.find((m) => m.kind === "start_game");
+    assert.ok(welcome && welcome.kind === "welcome");
+    assert.equal(welcome.assignedPlayerId, "B");
+    assert.ok(startGame && startGame.kind === "start_game");
+    assert.equal(startGame.snapshot.sessionSeq, host.getSnapshot().sessionSeq);
+  } finally {
+    Math.random = originalRandom;
+  }
+});
+
+test("Expired claim for the current player marks them inactive and advances the turn", () => {
+  const originalRandom = Math.random;
+  const originalNow = Date.now;
+  let now = 10_000;
+  Math.random = () => 0.34;
+  Date.now = () => now;
+
+  try {
+    const transport = new MockHostTransport();
+    const host = createHostSession(
+      { setup: setupConfigN(3) },
+      {},
+      {
+        transport,
+        clientId: "host-client",
+        displayName: "Host"
+      }
+    );
+
+    transport.emitPeerState("peer-1", "open");
+    transport.emitFrom("peer-1", buildMessage("peer-client-1", "hello", { displayName: "Peer 1" }));
+    transport.emitPeerState("peer-2", "open");
+    transport.emitFrom("peer-2", buildMessage("peer-client-2", "hello", { displayName: "Peer 2" }));
+    host.startGame();
+
+    assert.equal(host.getSnapshot().state.turnState.currentPlayer, "B");
+    transport.emitPeerState("peer-1", "closed");
+
+    now += 2 * 60 * 1000 + 1;
+    transport.emitFrom("peer-2", buildMessage("peer-client-2", "ping", { nonce: "n-1" }));
+
+    assert.deepEqual(host.getSnapshot().state.inactivePlayers, ["B"]);
+    assert.equal(host.getSnapshot().state.turnState.currentPlayer, "C");
+    assert.equal(host.getConnections().find((row) => row.peerId === "peer-1")?.status, "inactive");
+  } finally {
+    Math.random = originalRandom;
+    Date.now = originalNow;
+  }
+});
+
+test("Expired claim for a pending ask target clears the ask and advances to the next active player", () => {
+  const originalRandom = Math.random;
+  const originalNow = Date.now;
+  let now = 20_000;
+  Math.random = () => 0;
+  Date.now = () => now;
+
+  try {
+    const transport = new MockHostTransport();
+    const host = createHostSession(
+      { setup: setupConfigN(3) },
+      {},
+      {
+        transport,
+        clientId: "host-client",
+        displayName: "Host"
+      }
+    );
+
+    transport.emitPeerState("peer-1", "open");
+    transport.emitFrom("peer-1", buildMessage("peer-client-1", "hello", { displayName: "Peer 1" }));
+    transport.emitPeerState("peer-2", "open");
+    transport.emitFrom("peer-2", buildMessage("peer-client-2", "hello", { displayName: "Peer 2" }));
+    host.startGame();
+    host.submitMove({ kind: "Ask", asker: "A", target: "B", suit: "S1" });
+    transport.emitPeerState("peer-1", "closed");
+
+    now += 2 * 60 * 1000 + 1;
+    transport.emitFrom("peer-2", buildMessage("peer-client-2", "ping", { nonce: "n-2" }));
+
+    assert.equal(host.getSnapshot().state.turnState.pendingAsk, undefined);
+    assert.equal(host.getSnapshot().state.turnState.currentPlayer, "C");
+    assert.deepEqual(host.getSnapshot().state.inactivePlayers, ["B"]);
+  } finally {
+    Math.random = originalRandom;
+    Date.now = originalNow;
+  }
+});
+
+test("Expired claim for a pending ask asker clears the ask and advances to the next active player", () => {
+  const originalRandom = Math.random;
+  const originalNow = Date.now;
+  let now = 30_000;
+  Math.random = () => 0.34;
+  Date.now = () => now;
+
+  try {
+    const transport = new MockHostTransport();
+    const host = createHostSession(
+      { setup: setupConfigN(3) },
+      {},
+      {
+        transport,
+        clientId: "host-client",
+        displayName: "Host"
+      }
+    );
+
+    transport.emitPeerState("peer-1", "open");
+    transport.emitFrom("peer-1", buildMessage("peer-client-1", "hello", { displayName: "Peer 1" }));
+    transport.emitPeerState("peer-2", "open");
+    transport.emitFrom("peer-2", buildMessage("peer-client-2", "hello", { displayName: "Peer 2" }));
+    host.startGame();
+
+    transport.emitFrom(
+      "peer-1",
+      buildMessage("peer-client-1", "move_request", {
+        move: { kind: "Ask", asker: "B", target: "A", suit: "S1" },
+        knownSeq: host.getSnapshot().sessionSeq,
+        knownHash: host.getSnapshot().stateHash
+      })
+    );
+    transport.emitPeerState("peer-1", "closed");
+
+    now += 2 * 60 * 1000 + 1;
+    transport.emitFrom("peer-2", buildMessage("peer-client-2", "ping", { nonce: "n-3" }));
+
+    assert.equal(host.getSnapshot().state.turnState.pendingAsk, undefined);
+    assert.equal(host.getSnapshot().state.turnState.currentPlayer, "C");
+    assert.deepEqual(host.getSnapshot().state.inactivePlayers, ["B"]);
+  } finally {
+    Math.random = originalRandom;
+    Date.now = originalNow;
+  }
+});
+
+test("Restart game clears suit metadata and reserved reconnect claims and rebuilds from open players only", () => {
+  const originalRandom = Math.random;
+  const originalNow = Date.now;
+  let now = 40_000;
+  Math.random = () => 0;
+  Date.now = () => now;
+
+  try {
+    const transport = new MockHostTransport();
+    const host = createHostSession(
+      { setup: setupConfigN(3) },
+      {},
+      {
+        transport,
+        clientId: "host-client",
+        displayName: "Host"
+      }
+    );
+
+    transport.emitPeerState("peer-1", "open");
+    transport.emitFrom("peer-1", buildMessage("peer-client-1", "hello", { displayName: "Peer 1" }));
+    transport.emitPeerState("peer-2", "open");
+    transport.emitFrom("peer-2", buildMessage("peer-client-2", "hello", { displayName: "Peer 2" }));
+    host.startGame();
+    host.setSuitMeta("S1", { name: "Stars" });
+    transport.emitPeerState("peer-2", "closed");
+
+    host.restartGame();
+
+    assert.deepEqual(host.getSeatClaims(), []);
+    assert.deepEqual(host.getSuitMeta(), {});
+    assert.deepEqual(host.getSnapshot().state.players, ["A", "B"]);
+  } finally {
+    Math.random = originalRandom;
+    Date.now = originalNow;
+  }
+});

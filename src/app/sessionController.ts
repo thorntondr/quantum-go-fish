@@ -223,14 +223,21 @@ export function createHostSession(
       return;
     }
 
-    refreshSnapshotForRoster(reason, true);
     if (reason === "restart_game") {
       for (const key of Object.keys(suitMeta)) {
         delete suitMeta[key];
       }
-      emitSuitMeta();
       seatClaims.clear();
+      for (const [peerId, connection] of connections.entries()) {
+        if (peerId === "self" || connection.status !== "reserved") {
+          continue;
+        }
+        connections.set(peerId, { ...connection, status: "inactive" });
+      }
+      emitSuitMeta();
+      updateConnections();
     }
+    refreshSnapshotForRoster(reason, true);
     started = true;
     hooks.onGameStarted(true);
     hooks.onSnapshot(snapshot);
