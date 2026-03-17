@@ -737,9 +737,6 @@ async function initSession(options: {
   if (options.role === "host") {
     hostTransport = new HostPeerJsTransport(localPeerId);
     hostTransport.onReady((id) => {
-      if (roomCodeInput) {
-        roomCodeInput.value = id;
-      }
       setWaitingRoomCode(id);
       appendLog(`Host code ready: ${id}`);
     });
@@ -787,10 +784,7 @@ function submitMove(move: Move): void {
 if (hostBtn && friendlyNameInput) {
   hostBtn.addEventListener("click", () => {
     const name = friendlyNameInput.value.trim() || "Player";
-    const hostCode = roomCodeInput?.value.trim() || randomHostCode();
-    if (roomCodeInput) {
-      roomCodeInput.value = hostCode;
-    }
+    const hostCode = randomHostCode();
     void initSession({
       role: "host",
       hostCode,

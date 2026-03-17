@@ -45,19 +45,13 @@ This runs TypeScript build + Node test suite (engine + session/protocol tests).
 ## Multiplayer playtest flow (PeerJS Cloud)
 
 Use two browser windows/devices: one **Host**, one **Join**.  
-For 3-4 players, open additional Join clients with unique local peer ids.
+For 3-4 players, open additional Join clients.
 
-1. Host sets:
-   - `Role = Host`
-   - `Host Code` (share this value with joiners)
-   - `Local Peer ID` (usually same as host code)
-2. Joiner sets:
-   - `Role = Join`
-   - `Host Code` (host's shared code)
-   - `Local Peer ID` (unique per joiner)
-3. Click `Initialize Session` on all clients.
+1. Host enters a name and clicks `Host`.
+2. The app creates a room code and share link in the waiting room.
+3. Each joiner enters a name, pastes the host's room code into `Room Code to Join`, and clicks `Join`.
 4. PeerJS Cloud handles signaling and host/peer channels open automatically.
-5. When peers are open, host clicks `Start Game`.
+5. When players are connected, the host clicks `Start Game`.
 
 After host starts game and assigns you a player, your move buttons enable only when legal for your player/turn.
 
