@@ -63,6 +63,7 @@ let hostSession: HostSession | undefined;
 let peerSession: PeerSession | undefined;
 let hostTransport: HostPeerJsTransport | undefined;
 let peerTransport: PeerPeerJsTransport | undefined;
+let currentRole: SessionRole | undefined;
 let playerLabelById = new Map<string, string>();
 type SuitMeta = SessionSuitMeta;
 let suitMetaById = new Map<string, SuitMeta>();
@@ -595,7 +596,12 @@ function render(): void {
 function sessionHooks() {
   return {
     onLog: appendLog,
-    onSessionError: setSessionError,
+    onSessionError: (message: string) => {
+      setSessionError(message);
+      if (currentRole === "peer" && !gameStarted) {
+        closeSession();
+      }
+    },
     onMoveError: setMoveError,
     onConnectionsChanged: renderRoster,
     onSnapshot: (snapshot: { state: GameState }) => {
@@ -637,6 +643,7 @@ function closeSession(): void {
   peerSession = undefined;
   hostTransport = undefined;
   peerTransport = undefined;
+  currentRole = undefined;
   assignedPlayer = undefined;
   gameStarted = false;
   if (rosterRoot) {
@@ -713,6 +720,7 @@ async function initSession(options: {
   clearErrors();
   closeSession();
 
+  currentRole = options.role;
   const hostCode = options.hostCode.trim();
   const localPeerId = options.localPeerId.trim();
   if (!hostCode) {

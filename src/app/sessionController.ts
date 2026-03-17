@@ -701,6 +701,7 @@ export function createPeerSession(
   let snapshot: SessionSnapshot | undefined;
   let started = false;
   let helloSent = false;
+  let welcomeReceived = false;
   const suitMeta: Record<string, SuitMeta> = {};
   const connections = new Map<PeerId, ConnectionState>();
   connections.set("host", { peerId: "host", status: "new", label: "Host" });
@@ -773,6 +774,16 @@ export function createPeerSession(
     connections.set(peerId, { ...current, status });
     updateConnections();
     if (peerId === "host") {
+      if (!welcomeReceived && (status === "error" || status === "closed")) {
+        hooks.onSessionError("Unable to connect to host. Check the room code and try again.");
+        started = false;
+        hooks.onGameStarted(false);
+        hooks.onAssignedPlayer(undefined);
+        connections.clear();
+        updateConnections();
+        transport.close();
+        return;
+      }
       sendHelloIfReady();
     }
   });
@@ -783,6 +794,7 @@ export function createPeerSession(
     }
 
     if (message.kind === "welcome") {
+      welcomeReceived = true;
       assignedPlayerId = message.assignedPlayerId || undefined;
       hooks.onAssignedPlayer(assignedPlayerId);
       for (const key of Object.keys(suitMeta)) {
@@ -811,6 +823,7 @@ export function createPeerSession(
     }
 
     if (message.kind === "start_game") {
+      welcomeReceived = true;
       started = true;
       hooks.onGameStarted(true);
       applySnapshot(message.snapshot, "start_game");
