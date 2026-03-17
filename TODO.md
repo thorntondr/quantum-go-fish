@@ -6,7 +6,7 @@
     - [ ] Consider removing the ability for the Host to choose their own room code.
 - [ ] Peter says there should be a special message for meeting both win conditions at the same time
 - [ ] Better UI to let you know when it's your turn to ask or answer
-- [ ] Clearer indication of game over state
+- [x] Clearer indication of game over state
 - [ ] The turn order should be apparant from the layout of the players' hands.  They currently just show in turn order, starting with the Host (or second player on the Host's UI).
 - [x] When answering a question, the question being asked should be more clearly displayed.  In single_device_ui.html there is no indication at all what the question is.
 - [ ] Optional rules variants to try, controllable by host via check list in waiting room. Can be implemented one at a time.

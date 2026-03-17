@@ -11,6 +11,7 @@ export interface RenderCardsOptions {
   getSuitMeta: (suitId: SuitId) => SuitMeta | undefined;
   localPlayerId?: PlayerId;
   highlightedPlayerId?: PlayerId;
+  winnerPlayerId?: PlayerId;
 }
 
 const DEFAULT_SUIT_SYMBOLS = ["◼", "▲", "◆", "●", "⬟", "⬣", "★", "✚"];
@@ -262,7 +263,7 @@ function renderCardStack(
 }
 
 export function renderCardHands(state: GameState, options: RenderCardsOptions): string {
-  const { formatPlayer, getSuitMeta, localPlayerId, highlightedPlayerId } = options;
+  const { formatPlayer, getSuitMeta, localPlayerId, highlightedPlayerId, winnerPlayerId } = options;
   const otherPlayers = state.players.filter((player) => player !== localPlayerId);
 
   return `
@@ -272,7 +273,10 @@ export function renderCardHands(state: GameState, options: RenderCardsOptions): 
           .map((playerId) => {
             const cards = buildCardsForPlayer(state, playerId);
             const isHighlighted = highlightedPlayerId === playerId;
-            const handClass = ["hand", isHighlighted ? "hand--highlight" : ""].filter(Boolean).join(" ");
+            const isWinner = winnerPlayerId === playerId;
+            const handClass = ["hand", isHighlighted ? "hand--highlight" : "", isWinner ? "hand--winner" : ""]
+              .filter(Boolean)
+              .join(" ");
             return `
               <section class="${handClass}">
                 <div class="hand-label">${formatPlayer(playerId)}</div>
@@ -286,7 +290,7 @@ export function renderCardHands(state: GameState, options: RenderCardsOptions): 
         localPlayerId
           ? `
         <div class="hands-self">
-          <section class="hand hand--self">
+          <section class="hand hand--self ${winnerPlayerId === localPlayerId ? "hand--winner" : ""}">
             <div class="hand-label">You — ${formatPlayer(localPlayerId)}</div>
             ${renderCardStack(buildCardsForPlayer(state, localPlayerId), state.suits, getSuitMeta)}
           </section>

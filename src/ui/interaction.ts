@@ -35,6 +35,8 @@ export function renderState(
   options: RenderOptions = {}
 ): void {
   const formatPlayer = options.formatPlayer ?? ((playerId: string) => playerId);
+  const winner = state.turnState.phase === "GameOver" ? state.turnState.winner : undefined;
+  const isGameOver = state.turnState.phase === "GameOver" && Boolean(winner);
   const getSuitMeta =
     options.getSuitMeta ??
     ((suitId: string) => {
@@ -46,16 +48,27 @@ export function renderState(
     formatPlayer,
     getSuitMeta,
     localPlayerId: options.localPlayerId,
-    highlightedPlayerId: options.highlightedPlayerId
+    highlightedPlayerId: options.highlightedPlayerId,
+    winnerPlayerId: winner
   });
   const tableHtml = renderPaperclipTable(state, formatPlayer, options.formatSuit);
+  const gameOverBanner = isGameOver
+    ? `
+    <section class="game-over-banner" aria-live="polite">
+      <p class="game-over-eyebrow">Game Over</p>
+      <h3>${formatPlayer(winner ?? state.turnState.currentPlayer)} wins</h3>
+      <p>Reason: ${formatWinReason(state.turnState.winReason)}</p>
+    </section>
+  `
+    : "";
   bindings.stateRoot.innerHTML = `
+    ${gameOverBanner}
     ${cardHtml}
-    <div class="debug-table">
+    <div class="debug-table ${isGameOver ? "debug-table--game-over" : ""}">
       ${tableHtml}
     </div>
   `;
-  if (state.turnState.phase === "GameOver" && state.turnState.winner) {
+  if (isGameOver && state.turnState.winner) {
     bindings.statusRoot.textContent =
       `Game Over. Winner: ${formatPlayer(state.turnState.winner)} (${formatWinReason(state.turnState.winReason)})`;
     return;

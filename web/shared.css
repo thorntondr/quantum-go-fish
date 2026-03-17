@@ -281,6 +281,18 @@ pre {
   color: #0f4f32;
 }
 
+.hand--winner {
+  padding: 10px 16px 18px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 248, 214, 0.96), rgba(255, 255, 255, 0.88));
+  border: 2px solid #c69116;
+  box-shadow: 0 18px 30px rgba(198, 145, 22, 0.2);
+}
+
+.hand--winner .hand-label {
+  color: #7b5300;
+}
+
 .hand-label {
   font-size: 0.95rem;
   font-weight: 600;
@@ -387,6 +399,41 @@ pre {
   overflow-x: auto;
   border-top: 1px dashed rgba(26, 50, 40, 0.2);
   padding-top: 12px;
+}
+
+.debug-table--game-over {
+  opacity: 0.82;
+}
+
+.game-over-banner {
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid #d6b04f;
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0) 40%),
+    linear-gradient(135deg, #fff5c8 0%, #ffe6a6 100%);
+  box-shadow: 0 14px 28px rgba(135, 97, 15, 0.18);
+}
+
+.game-over-banner h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  color: #6a4500;
+}
+
+.game-over-banner p {
+  margin: 4px 0 0;
+  color: #7a5611;
+}
+
+.game-over-eyebrow {
+  margin: 0 0 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #9a6a00;
 }
 
 .debug-table table {
