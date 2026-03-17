@@ -15,6 +15,7 @@ export interface RenderCardsOptions {
 const DEFAULT_SUIT_SYMBOLS = ["◼", "▲", "◆", "●", "⬟", "⬣", "★", "✚"];
 const UNKNOWN_LABEL = "Unknown";
 const UNKNOWN_COLOR = "#d6d9de";
+const UNKNOWN_SUIT_ID: SuitId = "__unknown__";
 
 interface CardModel {
   bands: SuitId[];
@@ -43,55 +44,7 @@ function buildCardsForPlayer(state: GameState, playerId: PlayerId): CardModel[] 
     return cards;
   }
 
-  let remainingTotal = Object.values(remaining).reduce((acc, value) => acc + value, 0);
   const minPerCard = 2;
-  const requiredTotal = uncertainCount * minPerCard;
-  let extras = Math.max(0, requiredTotal - remainingTotal);
-
-  if (state.suits.length >= 2) {
-    const byLeast = [...state.suits].sort((a, b) => remaining[a] - remaining[b]);
-    let positiveSuits = state.suits.filter((suit) => remaining[suit] > 0);
-    if (positiveSuits.length < 2) {
-      for (const suit of byLeast) {
-        if (remaining[suit] === 0 && extras > 0) {
-          remaining[suit] += 1;
-          extras -= 1;
-          positiveSuits = state.suits.filter((s) => remaining[s] > 0);
-          if (positiveSuits.length >= 2 || extras === 0) {
-            break;
-          }
-        }
-      }
-    }
-    if (positiveSuits.length < 2) {
-      const byMost = [...state.suits].sort((a, b) => remaining[b] - remaining[a]);
-      for (const suit of byLeast) {
-        if (remaining[suit] === 0) {
-          const donor = byMost.find((candidate) => remaining[candidate] > 1);
-          if (!donor) {
-            break;
-          }
-          remaining[donor] -= 1;
-          remaining[suit] += 1;
-          positiveSuits = state.suits.filter((s) => remaining[s] > 0);
-          if (positiveSuits.length >= 2) {
-            break;
-          }
-        }
-      }
-    }
-  }
-
-  while (extras > 0) {
-    let targetSuit = state.suits[0];
-    for (const suit of state.suits) {
-      if (remaining[suit] < remaining[targetSuit]) {
-        targetSuit = suit;
-      }
-    }
-    remaining[targetSuit] += 1;
-    extras -= 1;
-  }
 
   const pickSuit = (exclude: Set<SuitId>): SuitId | undefined => {
     let best: SuitId | undefined;
@@ -118,6 +71,9 @@ function buildCardsForPlayer(state: GameState, playerId: PlayerId): CardModel[] 
       }
       chosen.add(suit);
       remaining[suit] -= 1;
+    }
+    while (chosen.size < minPerCard) {
+      chosen.add(UNKNOWN_SUIT_ID);
     }
     card.bands = [...chosen];
   }
@@ -162,6 +118,9 @@ function resolveSuitName(suitMeta: SuitMeta | undefined): string {
 }
 
 function resolveSuitSymbol(suit: SuitId, suits: SuitId[], suitMeta: SuitMeta | undefined): string {
+  if (suit === UNKNOWN_SUIT_ID) {
+    return "∅";
+  }
   const symbol = suitMeta?.symbol?.trim();
   return symbol && symbol.length > 0 ? symbol : defaultSymbolForSuit(suit, suits);
 }

@@ -1,0 +1,233 @@
+{
+  "note": "A's hand shows a potential S3, even though the max for A/S3 is 0.",
+  "matchingPlayer": "A",  
+  "matchingPlayerStats": {
+    "unknownSuitSum": 5,  
+    "hand": 4,
+    "minSum": 1,
+    "rhs": 6
+  },
+  "config": {
+    "players": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ],
+    "suits": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "suitTotals": {
+      "S1": 4,
+      "S2": 4,
+      "S3": 4,
+      "S4": 4
+    },
+    "handSizes": {
+      "A": 4,
+      "B": 4,
+      "C": 4,
+      "D": 4
+    },
+    "startingPlayer": "B"
+  },
+  "actions": [
+    {
+      "sequence": 1,
+      "actor": "B",
+      "move": {
+        "kind": "Ask",
+        "asker": "B",
+        "target": "C",
+        "suit": "S4"
+      }
+    },
+    {
+      "sequence": 2,
+      "actor": "C",
+      "move": {
+        "kind": "AnswerYes",
+        "target": "C",
+        "suit": "S4"
+      }
+    },
+    {
+      "sequence": 3,
+      "actor": "C",
+      "move": {
+        "kind": "Ask",
+        "asker": "C",
+        "target": "B",
+        "suit": "S2"
+      }
+    },
+    {
+      "sequence": 4,
+      "actor": "B",
+      "move": {
+        "kind": "AnswerYes",
+        "target": "B",
+        "suit": "S2"
+      }
+    },
+    {
+      "sequence": 5,
+      "actor": "D",
+      "move": {
+        "kind": "Ask",
+        "asker": "D",
+        "target": "A",
+        "suit": "S3"
+      }
+    },
+    {
+      "sequence": 6,
+      "actor": "A",
+      "move": {
+        "kind": "AnswerNo",
+        "target": "A",
+        "suit": "S3"
+      }
+    },
+    {
+      "sequence": 7,
+      "actor": "A",
+      "move": {
+        "kind": "Ask",
+        "asker": "A",
+        "target": "D",
+        "suit": "S1"
+      }
+    },
+    {
+      "sequence": 8,
+      "actor": "D",
+      "move": {
+        "kind": "AnswerNo",
+        "target": "D",
+        "suit": "S1"
+      }
+    },
+    {
+      "sequence": 9,
+      "actor": "B",
+      "move": {
+        "kind": "Ask",
+        "asker": "B",
+        "target": "C",
+        "suit": "S2"
+      }
+    },
+    {
+      "sequence": 10,
+      "actor": "C",
+      "move": {
+        "kind": "AnswerYes",
+        "target": "C",
+        "suit": "S2"
+      }
+    },
+    {
+      "sequence": 11,
+      "actor": "C",
+      "move": {
+        "kind": "Ask",
+        "asker": "C",
+        "target": "D",
+        "suit": "S1"
+      }
+    }
+  ],
+  "state": {
+    "players": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ],
+    "suits": [
+      "S1",
+      "S2",
+      "S3",
+      "S4"
+    ],
+    "suitTotals": {
+      "S1": 4,
+      "S2": 4,
+      "S3": 4,
+      "S4": 4
+    },
+    "handSizes": {
+      "A": 4,
+      "B": 5,
+      "C": 3,
+      "D": 4
+    },
+    "min": {
+      "A": {
+        "S1": 1,
+        "S2": 0,
+        "S3": 0,
+        "S4": 0
+      },
+      "B": {
+        "S1": 0,
+        "S2": 2,
+        "S3": 0,
+        "S4": 2
+      },
+      "C": {
+        "S1": 1,
+        "S2": 1,
+        "S3": 0,
+        "S4": 0
+      },
+      "D": {
+        "S1": 0,
+        "S2": 0,
+        "S3": 2,
+        "S4": 0
+      }
+    },
+    "max": {
+      "A": {
+        "S1": 3,
+        "S2": 1,
+        "S3": 0,
+        "S4": 2
+      },
+      "B": {
+        "S1": 1,
+        "S2": 3,
+        "S3": 1,
+        "S4": 3
+      },
+      "C": {
+        "S1": 2,
+        "S2": 2,
+        "S3": 1,
+        "S4": 1
+      },
+      "D": {
+        "S1": 0,
+        "S2": 1,
+        "S3": 4,
+        "S4": 2
+      }
+    },
+    "inactivePlayers": [],
+    "turnState": {
+      "phase": "AwaitingAnswer",
+      "currentPlayer": "C",
+      "pendingAsk": {
+        "asker": "C",
+        "target": "D",
+        "suit": "S1"
+      }
+    },
+    "version": 1
+  }
+}
