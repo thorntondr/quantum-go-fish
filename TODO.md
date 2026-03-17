@@ -1,13 +1,12 @@
 - [ ] Revisit disconnection design
     - [ ] BUG: When we tried to host from the family PC or from Peter's chromebook, the other of the two was not able to join.  It appeared to put them in another room (see above).
-- [ ] "Return Home" and "Leave Game" buttons seem redundant.  Consider reworking this part of the design.
+- [ ] "Return Home" and "Leave Game" buttons seem redundant
 - [ ] Add an info button that shows full instructions on how to play the game
-- [ ] BUG: If I type in another host's room id and press "Host" it opens a new room with the same id.
-    - [ ] Consider removing the ability for the Host to choose their own room code.
-- [ ] Peter says there should be a special message for meeting both win conditions at the same time
+- [ ] BUG: If I type in another host's room id and press "Host" it opens a new room with the same id. Solution: Remove the ability for the Host to choose their own room code.
+- [ ] When both win conditions are met simultaneously by the same player, the Game Over message should reflect that.
 - [x] Better UI to let you know when it's your turn to ask or answer
 - [x] Clearer indication of game over state
-- [ ] The turn order should be apparant from the layout of the players' hands.  They currently just show in turn order, starting with the Host (or second player on the Host's UI).
+- [ ] The display of other player's hands should start with the player who goes after you, rather than starting with the host player on every device.
 - [x] When answering a question, the question being asked should be more clearly displayed.  In single_device_ui.html there is no indication at all what the question is.
 - [ ] Optional rules variants to try, controllable by host via check list in waiting room. Can be implemented one at a time.
     - [ ] Max 3: All player's per-suit maximums start at 3 instead of 4.  This means that you will need to acquire at least one card from an opponent to get four of a kind.
