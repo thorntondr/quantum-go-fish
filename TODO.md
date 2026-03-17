@@ -1,7 +1,6 @@
 1. Revisit disconnection design
     1. BUG: When we tried to host from the family PC or from Peter's chromebook, the other of the two was not able to join.  It appeared to put them in another room (see above).
 1. "Return Home" and "Leave Game" buttons seem redundant.  Consider reworking this part of the design.
-1. When I'm choosing who to ask, the currently selected target player's hand should be highlighted somehow (larger or outlined or something)
 1. Add an info button that shows full instructions on how to play the game
 1. BUG: If I type in another host's room id and press "Host" it opens a new room with the same id.
     1. Consider removing the ability for the Host to choose their own room code.
