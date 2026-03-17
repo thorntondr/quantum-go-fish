@@ -14,6 +14,7 @@ export interface RenderOptions {
   getSuitMeta?: (suitId: string) => SuitMeta | undefined;
   localPlayerId?: string;
   highlightedPlayerId?: string;
+  statusText?: string;
 }
 
 function formatWinReason(reason?: string): string {
@@ -74,7 +75,7 @@ export function renderState(
     return;
   }
   bindings.statusRoot.textContent =
-    `Turn: ${formatPlayer(state.turnState.currentPlayer)} (${state.turnState.phase})`;
+    options.statusText ?? `Turn: ${formatPlayer(state.turnState.currentPlayer)} (${state.turnState.phase})`;
 }
 
 export function submitMove(state: GameState, move: Move): GameState {

@@ -5,7 +5,7 @@
 - [ ] BUG: If I type in another host's room id and press "Host" it opens a new room with the same id.
     - [ ] Consider removing the ability for the Host to choose their own room code.
 - [ ] Peter says there should be a special message for meeting both win conditions at the same time
-- [ ] Better UI to let you know when it's your turn to ask or answer
+- [x] Better UI to let you know when it's your turn to ask or answer
 - [x] Clearer indication of game over state
 - [ ] The turn order should be apparant from the layout of the players' hands.  They currently just show in turn order, starting with the Host (or second player on the Host's UI).
 - [x] When answering a question, the question being asked should be more clearly displayed.  In single_device_ui.html there is no indication at all what the question is.
@@ -17,7 +17,7 @@
 
 ## Audit follow-up
 
-- [ ] Fix the single-device status line so its custom "awaiting answer" and "viewing player" message is not overwritten by the shared renderer.
+- [x] Fix the single-device status line so its custom "awaiting answer" and "viewing player" message is not overwritten by the shared renderer.
 - [ ] Remove unused `SessionMessage` and `PeerStatus` declarations from `src/app/sessionController.ts`.
 - [ ] Remove or wire up unused UI/session helpers such as `src/ui/turnController.ts`, `src/ui/interaction.ts`'s exported `submitMove`, and the write-only `peerByClient` map if it is not needed.
 - [ ] Decide whether `web/debug.html` should remain supported by `src/web/main.ts`, and either align it with the shared UI contract/styles or retire it.

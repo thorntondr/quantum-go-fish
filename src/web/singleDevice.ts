@@ -11,6 +11,7 @@ const EMOJILIB_URL = "https://unpkg.com/emojilib@4.0.2/dist/emoji-en-US.json";
 let emojiKeywordMap: Record<string, string[]> | undefined;
 
 const statusRoot = requireEl("status");
+const turnActionNotice = getEl("turnActionNotice");
 const pendingAskNotice = getEl("pendingAskNotice");
 const errorRoot = requireEl("error");
 const stateRoot = requireEl("state");
@@ -156,6 +157,25 @@ function refreshPendingAskNotice(current: GameState): void {
   }
   pendingAskNotice.textContent = `${pending.asker} is asking ${pending.target} about ${formatSuit(pending.suit)}.`;
   pendingAskNotice.hidden = false;
+}
+
+function refreshTurnActionNotice(current: GameState): void {
+  if (!turnActionNotice) {
+    return;
+  }
+  if (current.turnState.phase === "GameOver") {
+    turnActionNotice.textContent = "";
+    turnActionNotice.hidden = true;
+    return;
+  }
+  const pending = current.turnState.pendingAsk;
+  if (pending) {
+    turnActionNotice.textContent = `${formatPlayer(pending.target)}'s turn to answer.`;
+    turnActionNotice.hidden = false;
+    return;
+  }
+  turnActionNotice.textContent = `${formatPlayer(current.turnState.currentPlayer)}'s turn to ask.`;
+  turnActionNotice.hidden = false;
 }
 
 function openSuitOverlay(suitId: string, move?: Move): void {
@@ -317,6 +337,10 @@ function refreshControls(current: GameState): void {
 
 function render(): void {
   if (!state) {
+    if (turnActionNotice) {
+      turnActionNotice.textContent = "";
+      turnActionNotice.hidden = true;
+    }
     if (pendingAskNotice) {
       pendingAskNotice.textContent = "";
       pendingAskNotice.hidden = true;
@@ -328,10 +352,7 @@ function render(): void {
   } else {
     viewPlayerId = state.turnState.currentPlayer;
   }
-  const statusLine = state.turnState.pendingAsk
-    ? `Awaiting answer: ${state.turnState.pendingAsk.target} (asking ${state.turnState.pendingAsk.asker}).`
-    : `Turn: ${state.turnState.currentPlayer}`;
-  statusRoot.textContent = `${statusLine} Viewing: ${viewPlayerId ?? "-"}.`;
+  const statusText = `Viewing: ${viewPlayerId ?? "-"}.`;
 
   refreshControls(state);
   renderState(
@@ -342,9 +363,11 @@ function render(): void {
       formatSuit,
       getSuitMeta,
       localPlayerId: viewPlayerId,
-      highlightedPlayerId: selectedAskTarget
+      highlightedPlayerId: selectedAskTarget,
+      statusText
     }
   );
+  refreshTurnActionNotice(state);
   refreshPendingAskNotice(state);
 }
 

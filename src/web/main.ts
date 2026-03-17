@@ -9,6 +9,7 @@ import { renderState } from "../ui/interaction.js";
 
 const stateRoot = requireEl("state");
 const statusRoot = requireEl("status");
+const turnActionNotice = getEl("turnActionNotice");
 const pendingAskNotice = getEl("pendingAskNotice");
 const pauseNotice = getEl("pauseNotice");
 const sessionErrorRoot = requireEl("sessionError");
@@ -170,6 +171,29 @@ function refreshPendingAskNotice(current: GameState): void {
   pendingAskNotice.textContent =
     `${formatPlayer(pending.asker)} is asking ${formatPlayer(pending.target)} about ${formatSuit(pending.suit)}.`;
   pendingAskNotice.hidden = false;
+}
+
+function refreshTurnActionNotice(current: GameState): void {
+  if (!turnActionNotice) {
+    return;
+  }
+  if (current.turnState.phase === "GameOver") {
+    turnActionNotice.textContent = "";
+    turnActionNotice.hidden = true;
+    return;
+  }
+  if (canAnswer(current).yes || canAnswer(current).no) {
+    turnActionNotice.textContent = "Your turn to answer.";
+    turnActionNotice.hidden = false;
+    return;
+  }
+  if (canAsk(current)) {
+    turnActionNotice.textContent = "Your turn to ask.";
+    turnActionNotice.hidden = false;
+    return;
+  }
+  turnActionNotice.textContent = "";
+  turnActionNotice.hidden = true;
 }
 
 function getSuitMeta(suitId: string): SuitMeta | undefined {
@@ -607,6 +631,7 @@ function render(): void {
     localPlayerId: assignedPlayer,
     highlightedPlayerId: selectedAskTarget
   });
+  refreshTurnActionNotice(state);
   refreshPendingAskNotice(state);
   renderLegalMoves(state);
   refreshPlayAgain(state);

@@ -73,6 +73,13 @@ p {
   font-weight: 600;
 }
 
+.callout--action {
+  border-color: #d9c07a;
+  background: linear-gradient(135deg, #fff4cf 0%, #ffe7a2 100%);
+  color: #694500;
+  box-shadow: 0 8px 18px rgba(160, 117, 16, 0.16);
+}
+
 .controls-row {
   display: flex;
   flex-wrap: wrap;
