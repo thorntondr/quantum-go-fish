@@ -9,14 +9,11 @@ import type {
   ConnectionState,
   PeerId,
   RoomConfig,
-  SessionMessage,
   SessionSnapshot,
   SessionUiHooks,
   SuitMeta
 } from "./sessionTypes.js";
 import type { SessionTransport } from "./sessionTransport.js";
-
-type PeerStatus = "new" | "connecting" | "open" | "closed" | "error";
 
 interface SessionDeps {
   transport: SessionTransport;
@@ -136,7 +133,6 @@ export function createHostSession(
       }
     ]
   ]);
-  const peerByClient = new Map<ClientId, PeerId>();
   const assignedByPeer = new Map<PeerId, string>();
   const seatClaims = new Map<ClientId, SeatClaim>(
     deps.seatClaims?.map((claim) => [claim.clientId, claim]) ?? []
@@ -446,7 +442,6 @@ export function createHostSession(
       }
       if (existing?.clientId) {
         assignedByPeer.delete(peerId);
-        peerByClient.delete(existing.clientId);
       }
       updateConnections();
       broadcastRosterLeft(peerId);
@@ -496,7 +491,6 @@ export function createHostSession(
         label: message.displayName || fromPeerId
       };
       connections.set(fromPeerId, updated);
-      peerByClient.set(message.fromClientId, fromPeerId);
       if (claim) {
         seatClaims.delete(message.fromClientId);
       }

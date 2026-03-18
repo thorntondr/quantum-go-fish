@@ -1,7 +1,6 @@
-import { dispatchMove } from "../app/controller.js";
 import { renderCardHands, type SuitMeta } from "./cardHands.js";
 import { renderPaperclipTable } from "./paperclips.js";
-import type { GameState, Move } from "../engine/types.js";
+import type { GameState } from "../engine/types.js";
 
 export interface UiBindings {
   stateRoot: HTMLElement;
@@ -76,8 +75,4 @@ export function renderState(
   }
   bindings.statusRoot.textContent =
     options.statusText ?? `Turn: ${formatPlayer(state.turnState.currentPlayer)} (${state.turnState.phase})`;
-}
-
-export function submitMove(state: GameState, move: Move): GameState {
-  return dispatchMove(state, move);
 }
