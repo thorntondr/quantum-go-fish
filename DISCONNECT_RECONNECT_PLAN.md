@@ -19,15 +19,16 @@ Reconnect behavior is partially implemented in the session/controller layer, but
 - [ ] [Needs playtest] Capture logs, exact room-code behavior, and browser-visible errors during failed joins.
 - [ ] [Codex solo] Review the browser/session bootstrap path for readiness races or misleading join-failure handling.
 - [ ] [Codex solo] Audit and document the current disconnect/reconnect state machine implemented in `sessionController.ts`.
+- [ ] [Codex solo] Determine if it is feasible to intercept back navigation during gameplay.  If so, can we redirect it to the landing page and/or prompt the user for confirmation?  This could reduce accidental disconnects, mitigating the need for reconnects in practice.
 
 ### Product / Behavior Definition
 
-- [ ] [Needs PM] Define the intended reconnect promise for players.
-- [ ] [Needs PM] Decide whether host disconnect recovery is in scope.
-- [ ] [Needs PM] Decide whether reconnect is same-device-only or cross-device.
-- [ ] [Needs PM] Decide how long reserved seats should persist.
-- [ ] [Needs PM] Decide whether `Leave Game` is final for the current game.
-- [ ] [Needs PM] Decide how prominently reconnect / reserved-seat state should appear in the UI.
+- [x] [Needs PM] Define the intended reconnect promise for players.
+- [x] [Needs PM] Decide whether host disconnect recovery is in scope.
+- [x] [Needs PM] Decide whether reconnect is same-device-only or cross-device.
+- [x] [Needs PM] Decide how long reserved seats should persist.
+- [x] [Needs PM] Decide whether `Leave Game` is final for the current game.
+- [x] [Needs PM] Decide how prominently reconnect / reserved-seat state should appear in the UI.
 
 ### Session / Transport Implementation
 
@@ -35,10 +36,11 @@ Reconnect behavior is partially implemented in the session/controller layer, but
 - [ ] [Shared follow-up] Harden transport/session behavior based on findings from diagnostics and playtests.
 - [ ] [Shared follow-up] Implement the final reconnect semantics once PM decisions are made.
 
-### UI / UX Alignment
+### UI / UX Alignment and Refinement
 
 - [ ] [Needs playtest] Validate whether reconnect UX is understandable in actual multiplayer playtests.
 - [ ] [Shared follow-up] Implement final reconnect/reserved-seat UI once PM decisions are made.
+- [ ] Remove "Return Home" button and replace it with "Leave Game" button.  Ensure that "Leave Game" button is visible in waiting room and not landing page.
 
 ### Tests / Docs
 
@@ -49,12 +51,18 @@ Reconnect behavior is partially implemented in the session/controller layer, but
 
 ## PM Questions
 
-1. What user promise are we making for reconnect? Recommended default: peer disconnects are best-effort recoverable for a short window, while host disconnect ends the session.
-2. Should host disconnect recovery be in scope for this phase? Recommended default: no host migration for now; host disconnect ends the session cleanly.
-3. Is reconnect intended to work only after refresh on the same device, or also across devices/tabs? Recommended default: same-device refresh first, cross-device reclaim out of scope unless explicitly required.
-4. How long should a reserved seat remain reclaimable after disconnect? Recommended default: keep the current 2-minute window unless playtesting shows it is too short or confusing.
-5. Is `Leave Game` final for that seat in the current game? Recommended default: yes; accidental disconnect preserves a reclaim window, explicit leave does not.
-6. How visible should reconnect / reserved-seat state be in the product UI? Recommended default: surface it in the roster plus one prominent top-level notice.
+1. What user promise are we making for reconnect?
+    Answer: peer disconnects are best-effort recoverable for a short window, while host disconnect ends the session.
+2. Should host disconnect recovery be in scope for this phase?
+    Answer: No host migration for now; host disconnect ends the session cleanly.
+3. Is reconnect intended to work only after refresh on the same device, or also across devices/tabs?
+    Answer: Same-device only.  Migration is out of scope.
+4. How long should a reserved seat remain reclaimable after disconnect?
+    Answer: keep the current 2-minute window unless playtesting shows it is too short or confusing.
+5. Is `Leave Game` final for that seat in the current game?
+    Answer: Yes.
+6. How visible should reconnect / reserved-seat state be in the product UI?
+    Answer: Surfacing it in the roster plus one prominent top-level notice should suffice.
 
 ## Tasks Codex Can Complete Solo
 
