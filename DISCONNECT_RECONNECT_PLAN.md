@@ -17,7 +17,7 @@ Reconnect behavior is partially implemented in the session/controller layer, but
 
 - [ ] [Needs playtest] Reproduce the family-PC / Chromebook join failure on real browsers, devices, and network conditions.
 - [ ] [Needs playtest] Capture logs, exact room-code behavior, and browser-visible errors during failed joins.
-- [ ] [Codex solo] Review the browser/session bootstrap path for readiness races or misleading join-failure handling.
+- [x] [Codex solo] Review the browser/session bootstrap path for readiness races or misleading join-failure handling.
 - [ ] [Codex solo] Audit and document the current disconnect/reconnect state machine implemented in `sessionController.ts`.
 - [ ] [Codex solo] Determine if it is feasible to intercept back navigation during gameplay.  If so, can we redirect it to the landing page and/or prompt the user for confirmation?  This could reduce accidental disconnects, mitigating the need for reconnects in practice.
 
@@ -64,11 +64,20 @@ Reconnect behavior is partially implemented in the session/controller layer, but
 6. How visible should reconnect / reserved-seat state be in the product UI?
     Answer: Surfacing it in the roster plus one prominent top-level notice should suffice.
 
+## Bootstrap Review Findings
+
+- Host readiness race: `src/web/main.ts` shows the waiting room and calls `setWaitingRoomCode(hostCode)` before `HostPeerJsTransport.onReady()` confirms the host PeerJS id is actually open. The UI can therefore expose a room code and share link before hosting is truly ready.
+- Premature waiting-room state on join: peers are moved to the waiting screen immediately after `initSession()`, before any `welcome` or `join_reject` arrives. A failed join can therefore look like a valid room that is merely waiting.
+- Misleading join failure copy: `createPeerSession()` currently reports `Unable to connect to host. Check the room code and try again.` for any pre-`welcome` host error/close, even though the cause might be a bad room code, a host that is not ready yet, PeerJS signaling trouble, or a transient network failure.
+- No explicit handshake timeout: the peer path has no timeout for “connection opened but no `welcome` ever arrived,” so a partial bootstrap failure can leave the client sitting on the waiting screen without a clear explanation.
+- Partial reconnect support only: the controller supports seat-claim reconnects, but `src/web/main.ts` still has `ENABLE_SESSION_RESTORE = false`, so the browser UI does not currently provide a polished same-device resume flow after refresh or full disconnect.
+- Recommended next implementation step: add structured diagnostics first, then gate waiting-room/share UI on confirmed host readiness and improve peer error messaging so “bad room code” is not the fallback explanation for every bootstrap failure.
+
 ## Tasks Codex Can Complete Solo
 
 - [ ] Audit and document the current disconnect/reconnect state machine from `sessionController.ts`.
 - [ ] Add or improve structured diagnostics for host ready, peer ready, `hello`, `welcome`, `join_reject`, and connection state transitions.
 - [x] Align `README.md` with the actual currently supported reconnect behavior.
 - [ ] Add targeted automated tests for any currently uncovered disconnect/reconnect controller paths that do not require product decisions.
-- [ ] Review the browser/session bootstrap path for readiness races or misleading error handling around join failures.
+- [x] Review the browser/session bootstrap path for readiness races or misleading error handling around join failures.
 - [ ] Prepare a follow-up implementation plan once PM answers are available.
