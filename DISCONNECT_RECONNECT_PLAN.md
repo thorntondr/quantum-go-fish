@@ -45,7 +45,7 @@ Reconnect behavior is partially implemented in the session/controller layer, but
 ### Tests / Docs
 
 - [ ] [Codex solo] Add targeted automated tests for uncovered disconnect/reconnect controller paths that do not require product decisions.
-- [ ] [Codex solo] Align `README.md` with the actual currently supported reconnect behavior.
+- [x] [Codex solo] Align `README.md` with the actual currently supported reconnect behavior.
 - [ ] [Codex solo] Prepare a follow-up implementation plan once PM answers are available.
 - [ ] [Shared follow-up] Prioritize transport hardening vs. UI messaging vs. docs polish based on diagnostics and playtest results.
 
@@ -68,7 +68,7 @@ Reconnect behavior is partially implemented in the session/controller layer, but
 
 - [ ] Audit and document the current disconnect/reconnect state machine from `sessionController.ts`.
 - [ ] Add or improve structured diagnostics for host ready, peer ready, `hello`, `welcome`, `join_reject`, and connection state transitions.
-- [ ] Align `README.md` with the actual currently supported reconnect behavior.
+- [x] Align `README.md` with the actual currently supported reconnect behavior.
 - [ ] Add targeted automated tests for any currently uncovered disconnect/reconnect controller paths that do not require product decisions.
 - [ ] Review the browser/session bootstrap path for readiness races or misleading error handling around join failures.
 - [ ] Prepare a follow-up implementation plan once PM answers are available.

@@ -60,6 +60,8 @@ After host starts game and assigns you a player, your move buttons enable only w
 - Host is authoritative for all moves.
 - Peers submit `move_request`; host validates legality and commits canonical state.
 - Peers auto-request sync if commit sequence is not contiguous.
+- Non-host peers can use `Leave Game` to exit the current game; this is treated as final for that seat.
+- If a non-host peer disconnects unexpectedly, the host reserves that seat for about 2 minutes and may pause the game if that player is needed to act.
 - `Request/Send Sync` can be used manually:
   - Host broadcasts authoritative snapshot.
   - Peer requests snapshot from host.
@@ -76,5 +78,6 @@ After host starts game and assigns you a player, your move buttons enable only w
 ## Current limitations
 
 - Depends on PeerJS Cloud availability for signaling bootstrap.
-- No reconnect/resume after full disconnect.
+- Host disconnect ends the session; host migration is not supported.
+- The controller has partial same-device reconnect support for non-host peers, but the browser UI does not yet expose a polished resume flow after refresh or a full disconnect.
 - Host trust model only (not hardened for adversarial peers).
