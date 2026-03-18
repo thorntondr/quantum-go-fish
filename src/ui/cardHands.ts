@@ -23,6 +23,17 @@ interface CardModel {
   bands: SuitId[];
 }
 
+function rotatePlayersFromLocal(players: PlayerId[], localPlayerId?: PlayerId): PlayerId[] {
+  if (!localPlayerId) {
+    return players;
+  }
+  const localIndex = players.indexOf(localPlayerId);
+  if (localIndex === -1) {
+    return players.filter((player) => player !== localPlayerId);
+  }
+  return players.slice(localIndex + 1).concat(players.slice(0, localIndex));
+}
+
 function buildCardsForPlayer(state: GameState, playerId: PlayerId): CardModel[] {
   const total = state.handSizes[playerId] ?? 0;
   const cards: CardModel[] = Array.from({ length: total }, () => ({ bands: [] }));
@@ -264,12 +275,13 @@ function renderCardStack(
 
 export function renderCardHands(state: GameState, options: RenderCardsOptions): string {
   const { formatPlayer, getSuitMeta, localPlayerId, highlightedPlayerId, winnerPlayerId } = options;
-  const otherPlayers = state.players.filter((player) => player !== localPlayerId);
+  const displayedPlayers = rotatePlayersFromLocal(state.players, localPlayerId);
+  const otherPlayers = localPlayerId ? displayedPlayers.filter((player) => player !== localPlayerId) : displayedPlayers;
 
   return `
     <div class="hand-board">
       <div class="hands-other">
-        ${ (localPlayerId ? otherPlayers : state.players)
+        ${otherPlayers
           .map((playerId) => {
             const cards = buildCardsForPlayer(state, playerId);
             const isHighlighted = highlightedPlayerId === playerId;

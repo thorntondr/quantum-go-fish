@@ -6,7 +6,7 @@
 - [ ] When both win conditions are met simultaneously by the same player, the Game Over message should reflect that.
 - [x] Better UI to let you know when it's your turn to ask or answer
 - [x] Clearer indication of game over state
-- [ ] The display of other player's hands should start with the player who goes after you, rather than starting with the host player on every device.
+- [x] The display of other player's hands should start with the player who goes after you, rather than starting with the host player on every device.
 - [x] When answering a question, the question being asked should be more clearly displayed.  In single_device_ui.html there is no indication at all what the question is.
 - [ ] Optional rules variants to try, controllable by host via check list in waiting room. Can be implemented one at a time.
     - [ ] Max 3: All player's per-suit maximums start at 3 instead of 4.  This means that you will need to acquire at least one card from an opponent to get four of a kind.
