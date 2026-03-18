@@ -18,6 +18,8 @@ const DEFAULT_SUIT_SYMBOLS = ["◼", "▲", "◆", "●", "⬟", "⬣", "★", "
 const UNKNOWN_LABEL = "Unknown";
 const UNKNOWN_COLOR = "#d6d9de";
 const UNKNOWN_SUIT_ID: SuitId = "__unknown__";
+const LIGHT_BAND_INK = "#dee2e0";
+const DARK_BAND_INK = "#1a2a24";
 
 interface CardModel {
   bands: SuitId[];
@@ -142,6 +144,21 @@ function resolveSuitColor(suitMeta: SuitMeta | undefined): string {
   return suitMeta?.color?.trim() || UNKNOWN_COLOR;
 }
 
+function resolveBandInkColor(color: string): string {
+  const normalized = color.trim();
+  const hex = normalized.startsWith("#") ? normalized.slice(1) : normalized;
+  const expanded = hex.length === 3 ? hex.split("").map((char) => char + char).join("") : hex;
+  if (!/^[0-9a-fA-F]{6}$/.test(expanded)) {
+    return DARK_BAND_INK;
+  }
+  const red = Number.parseInt(expanded.slice(0, 2), 16) / 255;
+  const green = Number.parseInt(expanded.slice(2, 4), 16) / 255;
+  const blue = Number.parseInt(expanded.slice(4, 6), 16) / 255;
+  const channel = (value: number) => (value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+  const luminance = 0.2126 * channel(red) + 0.7152 * channel(green) + 0.0722 * channel(blue);
+  return luminance < 0.35 ? LIGHT_BAND_INK : DARK_BAND_INK;
+}
+
 function renderBand(
   suit: SuitId,
   suits: SuitId[],
@@ -156,6 +173,7 @@ function renderBand(
   const symbol = resolveSuitSymbol(suit, suits, suitMeta);
   const label = resolveSuitName(suitMeta);
   const color = resolveSuitColor(suitMeta);
+  const ink = resolveBandInkColor(color);
   const cornerHtml = `
       ${options.includeTopLeft ? `<div class="band-corner band-corner--tl">${symbol}</div>` : ""}
       ${options.includeBottomRight ? `<div class="band-corner band-corner--br">${symbol}</div>` : ""}
@@ -169,7 +187,7 @@ function renderBand(
     `
     : "";
   return `
-    <div class="card-band" style="--band-color: ${color}">
+    <div class="card-band" style="--band-color: ${color}; --band-ink: ${ink}">
       ${cornerHtml}
       ${centerHtml}
     </div>

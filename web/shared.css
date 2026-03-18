@@ -365,7 +365,7 @@ pre {
 .band-corner {
   position: absolute;
   font-size: 0.85rem;
-  color: #26332e;
+  color: var(--band-ink, #26332e);
   opacity: 0.9;
 }
 
@@ -391,14 +391,14 @@ pre {
 .band-symbol {
   font-size: 1.6rem;
   line-height: 1;
-  color: #1a2a24;
+  color: var(--band-ink, #1a2a24);
 }
 
 .band-name {
   font-size: 0.7rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #23312c;
+  color: var(--band-ink, #23312c);
 }
 
 .debug-table {

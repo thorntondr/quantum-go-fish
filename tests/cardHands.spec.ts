@@ -54,3 +54,23 @@ test("renderCardHands renders the local player only in the self-hand area", () =
   assert.equal(labelIndex(html, "B"), -1);
   assert.match(html, /You .* B/);
 });
+
+test("renderCardHands uses light ink for dark suit backgrounds", () => {
+  const html = renderCardHands(createInitialState(config), {
+    formatPlayer: (playerId) => playerId,
+    getSuitMeta: (suitId) => (suitId === "S1" ? { color: "#123456", name: "Deep Sea" } : undefined),
+    localPlayerId: "A"
+  });
+
+  assert.match(html, /--band-color: #123456; --band-ink: #f7fbf9/);
+});
+
+test("renderCardHands keeps dark ink for light suit backgrounds", () => {
+  const html = renderCardHands(createInitialState(config), {
+    formatPlayer: (playerId) => playerId,
+    getSuitMeta: (suitId) => (suitId === "S1" ? { color: "#f4e7a1", name: "Sunlight" } : undefined),
+    localPlayerId: "A"
+  });
+
+  assert.match(html, /--band-color: #f4e7a1; --band-ink: #1a2a24/);
+});
