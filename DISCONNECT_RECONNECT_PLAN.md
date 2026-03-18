@@ -81,3 +81,4 @@ Reconnect behavior is partially implemented in the session/controller layer, but
 - [ ] Add targeted automated tests for any currently uncovered disconnect/reconnect controller paths that do not require product decisions.
 - [x] Review the browser/session bootstrap path for readiness races or misleading error handling around join failures.
 - [ ] Prepare a follow-up implementation plan once PM answers are available.
+- [ ] [Codex solo] Determine if it is feasible to intercept back navigation during gameplay.  If so, can we redirect it to the landing page and/or prompt the user for confirmation?
