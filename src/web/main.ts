@@ -17,7 +17,7 @@ const moveErrorRoot = requireEl("moveError");
 const legalMoves = requireEl("legalMoves");
 const eventLogRoot = requireEl("eventLog");
 const playAgainBtn = getEl("playAgainBtn") as HTMLButtonElement | null;
-const homeBtn = getEl("homeBtn") as HTMLButtonElement | null;
+const sessionActions = getEl("sessionActions");
 
 const friendlyNameInput = getEl("friendlyName") as HTMLInputElement | null;
 const hostBtn = getEl("hostBtn") as HTMLButtonElement | null;
@@ -662,6 +662,9 @@ function setScreen(target: "landing" | "waiting" | "game"): void {
   if (!screenLanding || !screenWaiting || !screenGame) {
     return;
   }
+  if (sessionActions) {
+    sessionActions.hidden = target === "landing";
+  }
   const screens = {
     landing: screenLanding,
     waiting: screenWaiting,
@@ -843,14 +846,17 @@ if (leaveGameBtn) {
       closeSession();
       return;
     }
-    setSessionError("Only non-host players can leave the game.");
-  });
-}
-
-if (homeBtn) {
-  homeBtn.addEventListener("click", () => {
-    clearStoredSession();
-    closeSession();
+    if (hostSession) {
+      clearStoredSession();
+      closeSession();
+      return;
+    }
+    if (currentRole) {
+      clearStoredSession();
+      closeSession();
+      return;
+    }
+    setSessionError("No active game to leave.");
   });
 }
 
@@ -1031,4 +1037,5 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
+setScreen("landing");
 render();
