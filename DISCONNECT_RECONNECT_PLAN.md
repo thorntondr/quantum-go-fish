@@ -32,7 +32,7 @@ Reconnect behavior is partially implemented in the session/controller layer, but
 
 ### Session / Transport Implementation
 
-- [ ] [Codex solo] Add or improve structured diagnostics for host ready, peer ready, `hello`, `welcome`, `join_reject`, and connection state transitions.
+- [x] [Codex solo] Add or improve structured diagnostics for host ready, peer ready, `hello`, `welcome`, `join_reject`, and connection state transitions.
 - [ ] [Shared follow-up] Harden transport/session behavior based on findings from diagnostics and playtests.
 - [ ] [Shared follow-up] Implement the final reconnect semantics once PM decisions are made.
 
@@ -76,7 +76,7 @@ Reconnect behavior is partially implemented in the session/controller layer, but
 ## Tasks Codex Can Complete Solo
 
 - [ ] Audit and document the current disconnect/reconnect state machine from `sessionController.ts`.
-- [ ] Add or improve structured diagnostics for host ready, peer ready, `hello`, `welcome`, `join_reject`, and connection state transitions.
+- [x] Add or improve structured diagnostics for host ready, peer ready, `hello`, `welcome`, `join_reject`, and connection state transitions.
 - [x] Align `README.md` with the actual currently supported reconnect behavior.
 - [ ] Add targeted automated tests for any currently uncovered disconnect/reconnect controller paths that do not require product decisions.
 - [x] Review the browser/session bootstrap path for readiness races or misleading error handling around join failures.

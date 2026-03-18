@@ -179,6 +179,34 @@ test("Host session accepts legal move_request and broadcasts state_commit", () =
   }
 });
 
+test("Host session logs connection transitions and welcome handshake details", () => {
+  const transport = new MockHostTransport();
+  const logs: string[] = [];
+  createHostSession(
+    { setup: setupConfig2() },
+    {
+      onLog: (line) => logs.push(line)
+    },
+    {
+      transport,
+      clientId: "host-client",
+      displayName: "Host"
+    }
+  );
+
+  transport.emitPeerState("peer-1", "open");
+  transport.emitFrom(
+    "peer-1",
+    buildMessage("peer-client", "hello", {
+      displayName: "Remote"
+    })
+  );
+
+  assert.ok(logs.some((line) => line.includes("Peer peer-1 connection state: missing -> open.")));
+  assert.ok(logs.some((line) => line.includes("Received hello from Remote (peer-1) client=peer-client.")));
+  assert.ok(logs.some((line) => line.includes("Sending welcome to Remote (peer-1) as player B.")));
+});
+
 test("Host session rejects illegal move_request without mutating state", () => {
   const transport = new MockHostTransport();
   const host = createHostSession(
@@ -277,6 +305,37 @@ test("Peer session requests sync on commit sequence gap", () => {
 
   const hasSyncRequest = transport.sentToHost.some((m) => m.kind === "sync_request");
   assert.equal(hasSyncRequest, true);
+});
+
+test("Peer session logs host connection transitions, hello, and join rejection", () => {
+  const transport = new MockPeerTransport();
+  const logs: string[] = [];
+  const errors: string[] = [];
+  createPeerSession(
+    {
+      onLog: (line) => logs.push(line),
+      onSessionError: (message) => errors.push(message)
+    },
+    {
+      transport,
+      clientId: "peer-client",
+      displayName: "Remote"
+    }
+  );
+
+  transport.emitHostState("connecting");
+  transport.emitHostState("open");
+  transport.emitFromHost(
+    buildMessage("host-client", "join_reject", {
+      reason: "Room is full."
+    })
+  );
+
+  assert.ok(logs.some((line) => line.includes("Peer view of host connection state: new -> connecting.")));
+  assert.ok(logs.some((line) => line.includes("Peer view of host connection state: connecting -> open.")));
+  assert.ok(logs.some((line) => line.includes("Sent hello to host as Remote (client=peer-client).")));
+  assert.ok(logs.some((line) => line.includes("Received join_reject from host: Room is full.")));
+  assert.deepEqual(errors, ["Room is full."]);
 });
 
 test("Host session supports starting with 13 connected players", () => {

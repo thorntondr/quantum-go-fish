@@ -99,6 +99,10 @@ function validateSnapshot(snapshot: SessionSnapshot): string | undefined {
 
 const RECONNECT_WINDOW_MS = 2 * 60 * 1000;
 
+function describeConnectionTransition(previous: ConnectionState | undefined, nextStatus: ConnectionState["status"]): string {
+  return `${previous?.status ?? "missing"} -> ${nextStatus}`;
+}
+
 export function createHostSession(
   config: RoomConfig,
   uiHooks: Partial<SessionUiHooks>,
@@ -413,6 +417,7 @@ export function createHostSession(
       return;
     }
     const existing = connections.get(peerId);
+    hooks.onLog(`Peer ${peerId} connection state: ${describeConnectionTransition(existing, status)}.`);
     const next: ConnectionState = {
       peerId,
       clientId: existing?.clientId,
@@ -435,6 +440,9 @@ export function createHostSession(
           label: existing.label ?? existing.clientId
         });
         connections.set(peerId, { ...next, status: "reserved" });
+        hooks.onLog(
+          `Reserved seat for ${existing.playerId} after ${status} from ${existing.label ?? peerId}; reconnect window active.`
+        );
       }
       if (existing?.clientId) {
         assignedByPeer.delete(peerId);
@@ -453,12 +461,16 @@ export function createHostSession(
   transport.onMessage((fromPeerId, message) => {
     cleanupExpiredClaims();
     if (message.kind === "hello") {
+      hooks.onLog(
+        `Received hello from ${message.displayName || fromPeerId} (${fromPeerId}) client=${message.fromClientId}.`
+      );
       const claim = seatClaims.get(message.fromClientId);
       const assignedPlayerId =
         (claim && claim.expiresAt > Date.now() && !snapshot.state.inactivePlayers.includes(claim.playerId)
           ? claim.playerId
           : undefined) ?? assignedByPeer.get(fromPeerId) ?? nextAssignablePlayer();
       if (!assignedPlayerId || snapshot.state.inactivePlayers.includes(assignedPlayerId)) {
+        hooks.onLog(`Rejecting join from ${fromPeerId}; no available player slots.`);
         transport.send(
           fromPeerId,
           buildMessage(clientId, "join_reject", {
@@ -496,6 +508,7 @@ export function createHostSession(
       }
       updateConnections();
       refreshSnapshotForRoster("peer_joined");
+      hooks.onLog(`Sending welcome to ${updated.label} (${fromPeerId}) as player ${assignedPlayerId}.`);
 
       transport.send(
         fromPeerId,
@@ -507,6 +520,7 @@ export function createHostSession(
         })
       );
       if (started) {
+        hooks.onLog(`Sending start_game snapshot to rejoined peer ${updated.label} (${fromPeerId}).`);
         transport.send(
           fromPeerId,
           buildMessage(clientId, "start_game", {
@@ -773,15 +787,17 @@ export function createPeerSession(
     }
     transport.send("host", buildMessage(clientId, "hello", { displayName: deps.displayName }));
     helloSent = true;
-    hooks.onLog("Sent hello to host.");
+    hooks.onLog(`Sent hello to host as ${deps.displayName} (client=${clientId}).`);
   }
 
   transport.onPeerState((peerId, status) => {
     const current = connections.get(peerId) ?? { peerId, status: "new", label: peerId };
+    hooks.onLog(`Peer view of ${peerId} connection state: ${current.status} -> ${status}.`);
     connections.set(peerId, { ...current, status });
     updateConnections();
     if (peerId === "host") {
       if (!welcomeReceived && (status === "error" || status === "closed")) {
+        hooks.onLog(`Host connection failed before welcome: status=${status}.`);
         hooks.onSessionError("Unable to connect to host. Check the room code and try again.");
         started = false;
         hooks.onGameStarted(false);
@@ -814,11 +830,12 @@ export function createPeerSession(
         connections.set(row.peerId, row);
       }
       updateConnections();
-      hooks.onLog(`Assigned player: ${assignedPlayerId ?? "(none)"}.`);
+      hooks.onLog(`Received welcome from host; assigned player ${assignedPlayerId ?? "(none)"}.`);
       return;
     }
 
     if (message.kind === "join_reject") {
+      hooks.onLog(`Received join_reject from host: ${message.reason}`);
       hooks.onSessionError(message.reason);
       started = false;
       hooks.onGameStarted(false);
