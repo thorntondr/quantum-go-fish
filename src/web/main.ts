@@ -5,7 +5,13 @@ import { HostPeerJsTransport, PeerPeerJsTransport } from "../app/peerJsTransport
 import { createInitialState } from "../engine/state.js";
 import { isLegalMove } from "../engine/rules.js";
 import type { GameState, Move, SetupConfig } from "../engine/types.js";
-import { renderInstructions } from "../ui/instructions.js";
+import {
+  bindInfoOverlay,
+  createSuitOverlayController,
+  extractEmoji,
+  getEl,
+  requireEl
+} from "../ui/browserUi.js";
 import { renderState } from "../ui/interaction.js";
 
 const stateRoot = requireEl("state");
@@ -65,37 +71,13 @@ let currentRole: SessionRole | undefined;
 let playerLabelById = new Map<string, string>();
 type SuitMeta = SessionSuitMeta;
 let suitMetaById = new Map<string, SuitMeta>();
-
-function extractEmoji(label: string): string | undefined {
-  const match = label.match(/\p{Extended_Pictographic}/u);
-  return match ? match[0] : undefined;
-}
 let playerStatusById = new Map<string, string>();
 let currentRoomCode = "";
-let pendingSuitEdit: { suitId: string; move?: Move } | undefined;
 let selectedAskTarget: string | undefined;
 
 const STORAGE_KEY = "qgf-session-v1";
 const ENABLE_SESSION_RESTORE = false;
 const OKABE_ITO = ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"];
-const EMOJILIB_URL = "https://unpkg.com/emojilib@4.0.2/dist/emoji-en-US.json";
-let emojiKeywordMap: Record<string, string[]> | undefined;
-
-function byId(id: string): HTMLElement {
-  const node = document.getElementById(id);
-  if (!node) {
-    throw new Error(`Missing required element: #${id}`);
-  }
-  return node;
-}
-
-function getEl(id: string): HTMLElement | null {
-  return document.getElementById(id);
-}
-
-function requireEl(id: string): HTMLElement {
-  return byId(id);
-}
 
 function appendLog(message: string): void {
   const line = `[${new Date().toLocaleTimeString()}] ${message}`;
@@ -209,133 +191,6 @@ function submitSuitMeta(suitId: string, meta: SuitMeta): void {
 function defaultSuitColor(suitId: string): string {
   const index = Math.max(0, state.suits.indexOf(suitId));
   return OKABE_ITO[index % OKABE_ITO.length];
-}
-
-function singularizeToken(token: string): string {
-  if (token.endsWith("ies") && token.length > 3) {
-    return `${token.slice(0, -3)}y`;
-  }
-  if (token.endsWith("es") && token.length > 3) {
-    return token.slice(0, -2);
-  }
-  if (token.endsWith("s") && token.length > 2) {
-    return token.slice(0, -1);
-  }
-  return token;
-}
-
-function normalizeQueryTokens(query: string): string[] {
-  const rawTokens = query.split(/[^a-z0-9]+/).filter((token) => token.length > 1);
-  const tokens = new Set<string>();
-  for (const token of rawTokens) {
-    tokens.add(token);
-    tokens.add(singularizeToken(token));
-  }
-  return [...tokens];
-}
-
-async function ensureEmojiLibrary(): Promise<void> {
-  if (emojiKeywordMap) {
-    return;
-  }
-  try {
-    const response = await fetch(EMOJILIB_URL);
-    if (!response.ok) {
-      return;
-    }
-    const data = (await response.json()) as Record<string, string[]>;
-    emojiKeywordMap = data;
-  } catch {
-    // ignore fetch failures; suggestions will be unavailable
-  }
-}
-
-function updateEmojiSuggestions(query: string): void {
-  if (!emojiSuggestions) {
-    return;
-  }
-  const trimmed = query.trim().toLowerCase();
-  if (!trimmed || !emojiKeywordMap) {
-    emojiSuggestions.innerHTML = "";
-    return;
-  }
-  const tokens = normalizeQueryTokens(trimmed);
-  if (tokens.length === 0) {
-    emojiSuggestions.innerHTML = "";
-    return;
-  }
-  const scores = new Map<string, number>();
-  for (const [emoji, keywords] of Object.entries(emojiKeywordMap)) {
-    let score = 0;
-    for (const token of tokens) {
-      if (keywords.includes(token)) {
-        score += 2;
-      } else if (keywords.some((keyword) => keyword.startsWith(token))) {
-        score += 1;
-      }
-    }
-    if (score > 0) {
-      scores.set(emoji, score);
-    }
-  }
-  const results = [...scores.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 12)
-    .map(([emoji]) => emoji);
-
-  if (results.length === 0) {
-    emojiSuggestions.innerHTML = "";
-    return;
-  }
-
-  emojiSuggestions.innerHTML = results
-    .map(
-      (emoji) => `<button class="emoji-suggestion" type="button" data-emoji="${emoji}">${emoji}</button>`
-    )
-    .join("");
-}
-
-function openSuitOverlay(suitId: string, move?: Move): void {
-  if (!suitOverlay || !suitNameInput || !suitSymbolInput || !suitColorInput) {
-    return;
-  }
-  pendingSuitEdit = { suitId, move };
-  const meta = getSuitMeta(suitId) ?? {};
-  const name = meta.name ?? "";
-  const symbol = meta.symbol ?? (name ? extractEmoji(name) ?? "" : "");
-  const color = meta.color ?? defaultSuitColor(suitId);
-  suitNameInput.value = name;
-  suitSymbolInput.value = symbol;
-  suitColorInput.value = color;
-  if (suitOverlayLabel) {
-    suitOverlayLabel.textContent = `Suit ${formatSuit(suitId)}`;
-  }
-  suitOverlay.classList.add("active");
-  void ensureEmojiLibrary().then(() => updateEmojiSuggestions(suitNameInput.value));
-}
-
-function closeSuitOverlay(): void {
-  if (!suitOverlay) {
-    return;
-  }
-  suitOverlay.classList.remove("active");
-  pendingSuitEdit = undefined;
-}
-
-function openInfoOverlay(): void {
-  if (!infoOverlay) {
-    return;
-  }
-  infoOverlay.hidden = false;
-  infoOverlay.classList.add("active");
-}
-
-function closeInfoOverlay(): void {
-  if (!infoOverlay) {
-    return;
-  }
-  infoOverlay.classList.remove("active");
-  infoOverlay.hidden = true;
 }
 
 function loadStoredSession(): Record<string, unknown> | undefined {
@@ -831,6 +686,34 @@ function submitMove(move: Move): void {
   setMoveError("Session is not initialized.");
 }
 
+const suitOverlayController = createSuitOverlayController<Move>({
+  overlay: suitOverlay,
+  labelEl: suitOverlayLabel,
+  nameInput: suitNameInput,
+  symbolInput: suitSymbolInput,
+  colorInput: suitColorInput,
+  saveBtn: suitSaveBtn,
+  cancelBtn: suitCancelBtn,
+  suggestionsRoot: emojiSuggestions,
+  formatSuit,
+  getMeta: getSuitMeta,
+  getDefaultColor: defaultSuitColor,
+  onSave: (suitId, meta, move) => {
+    submitSuitMeta(suitId, meta);
+    if (move) {
+      submitMove(move);
+    }
+  }
+});
+
+bindInfoOverlay({
+  infoBtn,
+  infoOverlay,
+  infoCloseBtn,
+  infoContent,
+  mode: "multiplayer"
+});
+
 if (hostBtn && friendlyNameInput) {
   hostBtn.addEventListener("click", () => {
     const name = friendlyNameInput.value.trim() || "Player";
@@ -938,83 +821,6 @@ if (shareRoomBtn && shareRoomLink) {
   });
 }
 
-if (suitCancelBtn) {
-  suitCancelBtn.addEventListener("click", () => {
-    closeSuitOverlay();
-  });
-}
-
-if (suitOverlay) {
-  suitOverlay.addEventListener("click", (event) => {
-    if (event.target === suitOverlay) {
-      closeSuitOverlay();
-    }
-  });
-}
-
-if (infoBtn) {
-  infoBtn.addEventListener("click", () => {
-    openInfoOverlay();
-  });
-}
-
-if (infoCloseBtn) {
-  infoCloseBtn.addEventListener("click", () => {
-    closeInfoOverlay();
-  });
-}
-
-if (infoOverlay) {
-  infoOverlay.addEventListener("click", (event) => {
-    if (event.target === infoOverlay) {
-      closeInfoOverlay();
-    }
-  });
-}
-
-if (infoContent) {
-  infoContent.innerHTML = renderInstructions("multiplayer");
-}
-
-if (suitNameInput) {
-  suitNameInput.addEventListener("input", () => {
-    updateEmojiSuggestions(suitNameInput.value);
-  });
-}
-
-if (emojiSuggestions && suitSymbolInput) {
-  emojiSuggestions.addEventListener("click", (event) => {
-    const target = event.target as HTMLElement | null;
-    if (!target) {
-      return;
-    }
-    const emoji = target.getAttribute("data-emoji");
-    if (!emoji) {
-      return;
-    }
-    suitSymbolInput.value = emoji;
-  });
-}
-
-if (suitSaveBtn && suitNameInput && suitSymbolInput && suitColorInput) {
-  suitSaveBtn.addEventListener("click", () => {
-    if (!pendingSuitEdit) {
-      return;
-    }
-    const meta: SuitMeta = {
-      name: suitNameInput.value.trim() || undefined,
-      symbol: suitSymbolInput.value.trim() || undefined,
-      color: suitColorInput.value.trim() || undefined
-    };
-    submitSuitMeta(pendingSuitEdit.suitId, meta);
-    const move = pendingSuitEdit.move;
-    closeSuitOverlay();
-    if (move) {
-      submitMove(move);
-    }
-  });
-}
-
 askBtn.addEventListener("click", () => {
   if (!assignedPlayer) {
     setMoveError("No assigned player.");
@@ -1029,7 +835,7 @@ askBtn.addEventListener("click", () => {
   const move: Move = { kind: "Ask", asker: assignedPlayer, target, suit };
   const meta = getSuitMeta(suit);
   if (!meta) {
-    openSuitOverlay(suit, move);
+    suitOverlayController.open(suit, move);
     return;
   }
   submitMove(move);

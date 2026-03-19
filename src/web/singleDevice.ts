@@ -2,15 +2,18 @@ import { createInitialState } from "../engine/state.js";
 import { applyMove } from "../engine/moves.js";
 import { isLegalMove } from "../engine/rules.js";
 import type { GameState, Move, SetupConfig } from "../engine/types.js";
-import { renderInstructions } from "../ui/instructions.js";
+import {
+  bindInfoOverlay,
+  createSuitOverlayController,
+  extractEmoji,
+  getEl,
+  requireEl
+} from "../ui/browserUi.js";
 import { renderState } from "../ui/interaction.js";
 
 type SuitMeta = { name?: string; symbol?: string; color?: string };
 
 const OKABE_ITO = ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"];
-const EMOJILIB_URL = "https://unpkg.com/emojilib@4.0.2/dist/emoji-en-US.json";
-let emojiKeywordMap: Record<string, string[]> | undefined;
-
 const statusRoot = requireEl("status");
 const turnActionNotice = getEl("turnActionNotice");
 const pendingAskNotice = getEl("pendingAskNotice");
@@ -39,25 +42,8 @@ const infoContent = getEl("infoContent");
 
 let state: GameState | undefined;
 let suitMetaById = new Map<string, SuitMeta>();
-let pendingSuitEdit: { suitId: string; move?: Move } | undefined;
 let viewPlayerId: string | undefined;
 let selectedAskTarget: string | undefined;
-
-function byId(id: string): HTMLElement {
-  const node = document.getElementById(id);
-  if (!node) {
-    throw new Error(`Missing required element: #${id}`);
-  }
-  return node;
-}
-
-function getEl(id: string): HTMLElement | null {
-  return document.getElementById(id);
-}
-
-function requireEl(id: string): HTMLElement {
-  return byId(id);
-}
 
 function setError(message: string): void {
   errorRoot.textContent = message;
@@ -67,98 +53,9 @@ function clearError(): void {
   setError("");
 }
 
-function extractEmoji(label: string): string | undefined {
-  const match = label.match(/\p{Extended_Pictographic}/u);
-  return match ? match[0] : undefined;
-}
-
 function defaultSuitColor(suitId: string, suits: string[]): string {
   const index = Math.max(0, suits.indexOf(suitId));
   return OKABE_ITO[index % OKABE_ITO.length];
-}
-
-function singularizeToken(token: string): string {
-  if (token.endsWith("ies") && token.length > 3) {
-    return `${token.slice(0, -3)}y`;
-  }
-  if (token.endsWith("es") && token.length > 3) {
-    return token.slice(0, -2);
-  }
-  if (token.endsWith("s") && token.length > 2) {
-    return token.slice(0, -1);
-  }
-  return token;
-}
-
-function normalizeQueryTokens(query: string): string[] {
-  const rawTokens = query.split(/[^a-z0-9]+/).filter((token) => token.length > 1);
-  const tokens = new Set<string>();
-  for (const token of rawTokens) {
-    tokens.add(token);
-    tokens.add(singularizeToken(token));
-  }
-  return [...tokens];
-}
-
-async function ensureEmojiLibrary(): Promise<void> {
-  if (emojiKeywordMap) {
-    return;
-  }
-  try {
-    const response = await fetch(EMOJILIB_URL);
-    if (!response.ok) {
-      return;
-    }
-    const data = (await response.json()) as Record<string, string[]>;
-    emojiKeywordMap = data;
-  } catch {
-    // ignore fetch failures; suggestions will be unavailable
-  }
-}
-
-function updateEmojiSuggestions(query: string): void {
-  if (!emojiSuggestions) {
-    return;
-  }
-  const trimmed = query.trim().toLowerCase();
-  if (!trimmed || !emojiKeywordMap) {
-    emojiSuggestions.innerHTML = "";
-    return;
-  }
-  const tokens = normalizeQueryTokens(trimmed);
-  if (tokens.length === 0) {
-    emojiSuggestions.innerHTML = "";
-    return;
-  }
-  const scores = new Map<string, number>();
-  for (const [emoji, keywords] of Object.entries(emojiKeywordMap)) {
-    let score = 0;
-    for (const token of tokens) {
-      if (keywords.includes(token)) {
-        score += 2;
-      } else if (keywords.some((keyword) => keyword.startsWith(token))) {
-        score += 1;
-      }
-    }
-    if (score > 0) {
-      scores.set(emoji, score);
-    }
-  }
-  const results = [...scores.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 12)
-    .map(([emoji]) => emoji);
-
-  if (results.length === 0) {
-    emojiSuggestions.innerHTML = "";
-    return;
-  }
-
-  emojiSuggestions.innerHTML = results
-    .map(
-      (emoji) => `<button class="emoji-suggestion" type="button" data-emoji="${emoji}">${emoji}</button>`
-    )
-    .join("");
 }
 
 function getSuitMeta(suitId: string): SuitMeta | undefined {
@@ -204,49 +101,6 @@ function refreshTurnActionNotice(current: GameState): void {
   }
   turnActionNotice.textContent = `${formatPlayer(current.turnState.currentPlayer)}'s turn to ask.`;
   turnActionNotice.hidden = false;
-}
-
-function openSuitOverlay(suitId: string, move?: Move): void {
-  if (!suitOverlay || !suitNameInput || !suitSymbolInput || !suitColorInput || !state) {
-    return;
-  }
-  pendingSuitEdit = { suitId, move };
-  const meta = getSuitMeta(suitId) ?? {};
-  const name = meta.name ?? "";
-  const symbol = meta.symbol ?? (name ? extractEmoji(name) ?? "" : "");
-  const color = meta.color ?? defaultSuitColor(suitId, state.suits);
-  suitNameInput.value = name;
-  suitSymbolInput.value = symbol;
-  suitColorInput.value = color;
-  if (suitOverlayLabel) {
-    suitOverlayLabel.textContent = `Suit ${formatSuit(suitId)}`;
-  }
-  suitOverlay.classList.add("active");
-  void ensureEmojiLibrary().then(() => updateEmojiSuggestions(suitNameInput.value));
-}
-
-function closeSuitOverlay(): void {
-  if (!suitOverlay) {
-    return;
-  }
-  suitOverlay.classList.remove("active");
-  pendingSuitEdit = undefined;
-}
-
-function openInfoOverlay(): void {
-  if (!infoOverlay) {
-    return;
-  }
-  infoOverlay.hidden = false;
-  infoOverlay.classList.add("active");
-}
-
-function closeInfoOverlay(): void {
-  if (!infoOverlay) {
-    return;
-  }
-  infoOverlay.classList.remove("active");
-  infoOverlay.hidden = true;
 }
 
 function updateSuitMeta(suitId: string, meta: SuitMeta): void {
@@ -359,6 +213,36 @@ function submitMove(move: Move): void {
   render();
 }
 
+const suitOverlayController = createSuitOverlayController<Move>({
+  overlay: suitOverlay,
+  labelEl: suitOverlayLabel,
+  nameInput: suitNameInput,
+  symbolInput: suitSymbolInput,
+  colorInput: suitColorInput,
+  saveBtn: suitSaveBtn,
+  cancelBtn: suitCancelBtn,
+  suggestionsRoot: emojiSuggestions,
+  formatSuit,
+  getMeta: getSuitMeta,
+  getDefaultColor: (suitId) => defaultSuitColor(suitId, state?.suits ?? []),
+  onSave: (suitId, meta, move) => {
+    updateSuitMeta(suitId, meta);
+    if (move) {
+      submitMove(move);
+    } else {
+      render();
+    }
+  }
+});
+
+bindInfoOverlay({
+  infoBtn,
+  infoOverlay,
+  infoCloseBtn,
+  infoContent,
+  mode: "single-device"
+});
+
 function refreshControls(current: GameState): void {
   const pending = current.turnState.pendingAsk;
   const currentPlayer = current.turnState.currentPlayer;
@@ -446,7 +330,7 @@ askBtn.addEventListener("click", () => {
   }
   const move: Move = { kind: "Ask", asker, target, suit };
   if (!getSuitMeta(suit)) {
-    openSuitOverlay(suit, move);
+    suitOverlayController.open(suit, move);
     return;
   }
   submitMove(move);
@@ -469,83 +353,5 @@ noBtn.addEventListener("click", () => {
   }
   submitMove({ kind: "AnswerNo", target: state.turnState.pendingAsk.target, suit: state.turnState.pendingAsk.suit });
 });
-
-if (suitCancelBtn) {
-  suitCancelBtn.addEventListener("click", () => {
-    closeSuitOverlay();
-  });
-}
-
-if (suitOverlay) {
-  suitOverlay.addEventListener("click", (event) => {
-    if (event.target === suitOverlay) {
-      closeSuitOverlay();
-    }
-  });
-}
-
-if (infoBtn) {
-  infoBtn.addEventListener("click", () => {
-    openInfoOverlay();
-  });
-}
-
-if (infoCloseBtn) {
-  infoCloseBtn.addEventListener("click", () => {
-    closeInfoOverlay();
-  });
-}
-
-if (infoOverlay) {
-  infoOverlay.addEventListener("click", (event) => {
-    if (event.target === infoOverlay) {
-      closeInfoOverlay();
-    }
-  });
-}
-
-if (infoContent) {
-  infoContent.innerHTML = renderInstructions("single-device");
-}
-
-if (suitNameInput) {
-  suitNameInput.addEventListener("input", () => {
-    updateEmojiSuggestions(suitNameInput.value);
-  });
-}
-
-if (emojiSuggestions && suitSymbolInput) {
-  emojiSuggestions.addEventListener("click", (event) => {
-    const target = event.target as HTMLElement | null;
-    if (!target) {
-      return;
-    }
-    const emoji = target.getAttribute("data-emoji");
-    if (!emoji) {
-      return;
-    }
-    suitSymbolInput.value = emoji;
-  });
-}
-
-if (suitSaveBtn && suitNameInput && suitSymbolInput && suitColorInput) {
-  suitSaveBtn.addEventListener("click", () => {
-    if (!pendingSuitEdit) {
-      return;
-    }
-    updateSuitMeta(pendingSuitEdit.suitId, {
-      name: suitNameInput.value.trim() || undefined,
-      symbol: suitSymbolInput.value.trim() || undefined,
-      color: suitColorInput.value.trim() || undefined
-    });
-    const move = pendingSuitEdit.move;
-    closeSuitOverlay();
-    if (move) {
-      submitMove(move);
-    } else {
-      render();
-    }
-  });
-}
 
 render();
