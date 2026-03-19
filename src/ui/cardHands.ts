@@ -298,6 +298,18 @@ export function renderCardHands(state: GameState, options: RenderCardsOptions): 
 
   return `
     <div class="hand-board">
+      ${
+        localPlayerId
+          ? `
+        <div class="hands-self">
+          <section class="hand hand--self ${winnerPlayerId === localPlayerId ? "hand--winner" : ""}">
+            <div class="hand-label">You — ${formatPlayer(localPlayerId)}</div>
+            ${renderCardStack(buildCardsForPlayer(state, localPlayerId), state.suits, getSuitMeta)}
+          </section>
+        </div>
+      `
+          : ""
+      }
       <div class="hands-other">
         ${otherPlayers
           .map((playerId) => {
@@ -316,18 +328,6 @@ export function renderCardHands(state: GameState, options: RenderCardsOptions): 
           })
           .join("")}
       </div>
-      ${
-        localPlayerId
-          ? `
-        <div class="hands-self">
-          <section class="hand hand--self ${winnerPlayerId === localPlayerId ? "hand--winner" : ""}">
-            <div class="hand-label">You — ${formatPlayer(localPlayerId)}</div>
-            ${renderCardStack(buildCardsForPlayer(state, localPlayerId), state.suits, getSuitMeta)}
-          </section>
-        </div>
-      `
-          : ""
-      }
     </div>
   `;
 }
