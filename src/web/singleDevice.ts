@@ -249,6 +249,11 @@ function updateSuitMeta(suitId: string, meta: SuitMeta): void {
   suitMetaById.set(suitId, normalized);
 }
 
+function randomStartingPlayer(players: string[]): string {
+  const index = Math.floor(Math.random() * players.length);
+  return players[index] ?? players[0];
+}
+
 function buildConfig(players: string[]): SetupConfig {
   const suits = Array.from({ length: players.length }, (_, i) => `S${i + 1}`);
   const suitTotals: Record<string, number> = {};
@@ -266,7 +271,7 @@ function buildConfig(players: string[]): SetupConfig {
     suits,
     suitTotals,
     handSizes,
-    startingPlayer: players[0]
+    startingPlayer: randomStartingPlayer(players)
   };
 }
 
