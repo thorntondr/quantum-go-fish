@@ -77,6 +77,29 @@ function defaultSuitColor(suitId: string, suits: string[]): string {
   return OKABE_ITO[index % OKABE_ITO.length];
 }
 
+function singularizeToken(token: string): string {
+  if (token.endsWith("ies") && token.length > 3) {
+    return `${token.slice(0, -3)}y`;
+  }
+  if (token.endsWith("es") && token.length > 3) {
+    return token.slice(0, -2);
+  }
+  if (token.endsWith("s") && token.length > 2) {
+    return token.slice(0, -1);
+  }
+  return token;
+}
+
+function normalizeQueryTokens(query: string): string[] {
+  const rawTokens = query.split(/[^a-z0-9]+/).filter((token) => token.length > 1);
+  const tokens = new Set<string>();
+  for (const token of rawTokens) {
+    tokens.add(token);
+    tokens.add(singularizeToken(token));
+  }
+  return [...tokens];
+}
+
 async function ensureEmojiLibrary(): Promise<void> {
   if (emojiKeywordMap) {
     return;
@@ -102,7 +125,7 @@ function updateEmojiSuggestions(query: string): void {
     emojiSuggestions.innerHTML = "";
     return;
   }
-  const tokens = trimmed.split(/[^a-z0-9]+/).filter((token) => token.length > 1);
+  const tokens = normalizeQueryTokens(trimmed);
   if (tokens.length === 0) {
     emojiSuggestions.innerHTML = "";
     return;
