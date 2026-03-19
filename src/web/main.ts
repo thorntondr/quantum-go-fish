@@ -15,7 +15,7 @@ const pendingAskNotice = getEl("pendingAskNotice");
 const pauseNotice = getEl("pauseNotice");
 const sessionErrorRoot = requireEl("sessionError");
 const moveErrorRoot = requireEl("moveError");
-const legalMoves = requireEl("legalMoves");
+const legalMoves = getEl("legalMoves");
 const eventLogRoot = requireEl("eventLog");
 const playAgainBtn = getEl("playAgainBtn") as HTMLButtonElement | null;
 const sessionActions = getEl("sessionActions");
@@ -458,6 +458,9 @@ function legalAnswerMoves(current: GameState): { yes: boolean; no: boolean } {
 }
 
 function renderLegalMoves(current: GameState): void {
+  if (!legalMoves) {
+    return;
+  }
   if (!assignedPlayer) {
     legalMoves.textContent = "No assigned player yet.";
     return;
