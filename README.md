@@ -22,6 +22,14 @@ npm run build
 
 Compiled output is written to `dist/`.
 
+To build the publishable/static site root:
+
+```bash
+npm run build:site
+```
+
+This writes the browser-ready site to `site/`.
+
 ## Test
 
 ```bash
@@ -34,14 +42,15 @@ This runs TypeScript build + Node test suite (engine + session/protocol tests).
 
 1. Build once:
    ```bash
-   npm run build
+   npm run build:site
    ```
-2. Serve the repo root with any static server (example):
+2. Serve the generated `site/` directory with any static server (example):
    ```bash
-   npx serve .
+   npx serve site
    ```
 3. Open `web/index.html` from that server in your browser for the default single-device mode (do not use `file://`).
-4. Open `web/multi_device_beta.html` for the host/join multiplayer beta UI.
+4. Open `/index.html` for the default single-device mode.
+5. Open `/multi_device_beta.html` for the host/join multiplayer beta UI.
 
 ## Multiplayer playtest flow (PeerJS Cloud)
 
@@ -74,8 +83,9 @@ After host starts game and assigns you a player, your move buttons enable only w
 - `src/ui/*`: state rendering utilities
 - `src/web/main.ts`: multiplayer browser integration and controls
 - `src/web/singleDevice.ts`: single-device browser integration and controls
-- `web/index.html`: default single-device playtest interface
-- `web/multi_device_beta.html`: host/join multiplayer beta interface
+- `web/index.html`: default single-device source interface
+- `web/multi_device_beta.html`: host/join multiplayer beta source interface
+- `site/`: generated static site root for local serving / GitHub Pages
 - `tests/*`: engine + replay + multiplayer protocol/controller tests
 
 ## Current limitations

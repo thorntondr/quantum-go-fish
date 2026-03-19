@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "build:site": "npm run build && node scripts/build-site.mjs",
     "test": "npm run build && node --test dist/tests/*.spec.js",
     "cli": "npm run build && node dist/src/cli/index.js"
   },

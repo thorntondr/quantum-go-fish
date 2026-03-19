@@ -1,4 +1,5 @@
 node_modules/
 dist/
+site/
 tmp-*.json
 __pycache__/top_css_colors_by_english_frequency.cpython-314.pyc
