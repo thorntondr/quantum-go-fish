@@ -14,6 +14,9 @@
       <p id="turnActionNotice" class="callout callout--action" hidden></p>
       <p id="pendingAskNotice" class="callout" hidden></p>
       <p id="error" class="err"></p>
+      <div class="controls-row" style="margin-top: 8px;">
+        <button id="infoBtn" class="alt">How to Play</button>
+      </div>
     </section>
 
     <section class="panel">
@@ -70,6 +73,16 @@
       <div class="overlay-actions">
         <button id="suitSaveBtn" class="primary">Save</button>
         <button id="suitCancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="infoOverlay" class="overlay" hidden>
+    <div class="overlay-panel overlay-panel--wide">
+      <h3>How to Play</h3>
+      <div id="infoContent" class="instructions-copy"></div>
+      <div class="overlay-actions">
+        <button id="infoCloseBtn" class="primary">Close</button>
       </div>
     </div>
   </div>

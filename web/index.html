@@ -20,6 +20,9 @@
         <button id="playAgainBtn" class="alt" style="display: none;">Play Again</button>
         <button id="leaveGameBtn">Leave Game</button>
       </div>
+      <div class="controls-row" style="margin-top: 8px;">
+        <button id="infoBtn" class="alt">How to Play</button>
+      </div>
     </section>
 
     <section id="screenLanding" class="panel screen active">
@@ -113,6 +116,16 @@
       <div class="overlay-actions">
         <button id="suitSaveBtn" class="primary">Save</button>
         <button id="suitCancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="infoOverlay" class="overlay" hidden>
+    <div class="overlay-panel overlay-panel--wide">
+      <h3>How to Play</h3>
+      <div id="infoContent" class="instructions-copy"></div>
+      <div class="overlay-actions">
+        <button id="infoCloseBtn" class="primary">Close</button>
       </div>
     </div>
   </div>

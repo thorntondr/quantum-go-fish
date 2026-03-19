@@ -5,6 +5,7 @@ import { HostPeerJsTransport, PeerPeerJsTransport } from "../app/peerJsTransport
 import { createInitialState } from "../engine/state.js";
 import { isLegalMove } from "../engine/rules.js";
 import type { GameState, Move, SetupConfig } from "../engine/types.js";
+import { renderInstructions } from "../ui/instructions.js";
 import { renderState } from "../ui/interaction.js";
 
 const stateRoot = requireEl("state");
@@ -38,6 +39,10 @@ const askBtn = requireEl("askBtn") as HTMLButtonElement;
 const yesBtn = requireEl("yesBtn") as HTMLButtonElement;
 const noBtn = requireEl("noBtn") as HTMLButtonElement;
 const leaveGameBtn = getEl("leaveGameBtn") as HTMLButtonElement | null;
+const infoBtn = getEl("infoBtn") as HTMLButtonElement | null;
+const infoOverlay = getEl("infoOverlay");
+const infoCloseBtn = getEl("infoCloseBtn") as HTMLButtonElement | null;
+const infoContent = getEl("infoContent");
 
 const suitOverlay = getEl("suitOverlay");
 const suitOverlayLabel = getEl("suitOverlayLabel");
@@ -292,6 +297,22 @@ function closeSuitOverlay(): void {
   }
   suitOverlay.classList.remove("active");
   pendingSuitEdit = undefined;
+}
+
+function openInfoOverlay(): void {
+  if (!infoOverlay) {
+    return;
+  }
+  infoOverlay.hidden = false;
+  infoOverlay.classList.add("active");
+}
+
+function closeInfoOverlay(): void {
+  if (!infoOverlay) {
+    return;
+  }
+  infoOverlay.classList.remove("active");
+  infoOverlay.hidden = true;
 }
 
 function loadStoredSession(): Record<string, unknown> | undefined {
@@ -903,6 +924,30 @@ if (suitOverlay) {
       closeSuitOverlay();
     }
   });
+}
+
+if (infoBtn) {
+  infoBtn.addEventListener("click", () => {
+    openInfoOverlay();
+  });
+}
+
+if (infoCloseBtn) {
+  infoCloseBtn.addEventListener("click", () => {
+    closeInfoOverlay();
+  });
+}
+
+if (infoOverlay) {
+  infoOverlay.addEventListener("click", (event) => {
+    if (event.target === infoOverlay) {
+      closeInfoOverlay();
+    }
+  });
+}
+
+if (infoContent) {
+  infoContent.innerHTML = renderInstructions("multiplayer");
 }
 
 if (suitNameInput) {

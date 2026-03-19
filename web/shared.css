@@ -212,8 +212,28 @@ pre {
   gap: 12px;
 }
 
+.overlay-panel--wide {
+  width: min(720px, 94vw);
+}
+
 .overlay-panel h3 {
   margin: 0;
+}
+
+.instructions-copy {
+  max-height: min(70vh, 560px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.instructions-copy ul {
+  margin: 6px 0 12px 20px;
+  padding: 0;
+}
+
+.instructions-copy li {
+  margin: 6px 0;
+  color: #29463b;
 }
 
 .overlay-actions {

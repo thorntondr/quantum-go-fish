@@ -2,6 +2,7 @@ import { createInitialState } from "../engine/state.js";
 import { applyMove } from "../engine/moves.js";
 import { isLegalMove } from "../engine/rules.js";
 import type { GameState, Move, SetupConfig } from "../engine/types.js";
+import { renderInstructions } from "../ui/instructions.js";
 import { renderState } from "../ui/interaction.js";
 
 type SuitMeta = { name?: string; symbol?: string; color?: string };
@@ -22,6 +23,7 @@ const askSuit = requireEl("askSuit") as HTMLSelectElement;
 const askBtn = requireEl("askBtn") as HTMLButtonElement;
 const yesBtn = requireEl("yesBtn") as HTMLButtonElement;
 const noBtn = requireEl("noBtn") as HTMLButtonElement;
+const infoBtn = getEl("infoBtn") as HTMLButtonElement | null;
 
 const suitOverlay = getEl("suitOverlay");
 const suitOverlayLabel = getEl("suitOverlayLabel");
@@ -31,6 +33,9 @@ const suitColorInput = getEl("suitColorInput") as HTMLInputElement | null;
 const suitSaveBtn = getEl("suitSaveBtn") as HTMLButtonElement | null;
 const suitCancelBtn = getEl("suitCancelBtn") as HTMLButtonElement | null;
 const emojiSuggestions = getEl("emojiSuggestions");
+const infoOverlay = getEl("infoOverlay");
+const infoCloseBtn = getEl("infoCloseBtn") as HTMLButtonElement | null;
+const infoContent = getEl("infoContent");
 
 let state: GameState | undefined;
 let suitMetaById = new Map<string, SuitMeta>();
@@ -203,6 +208,22 @@ function closeSuitOverlay(): void {
   }
   suitOverlay.classList.remove("active");
   pendingSuitEdit = undefined;
+}
+
+function openInfoOverlay(): void {
+  if (!infoOverlay) {
+    return;
+  }
+  infoOverlay.hidden = false;
+  infoOverlay.classList.add("active");
+}
+
+function closeInfoOverlay(): void {
+  if (!infoOverlay) {
+    return;
+  }
+  infoOverlay.classList.remove("active");
+  infoOverlay.hidden = true;
 }
 
 function updateSuitMeta(suitId: string, meta: SuitMeta): void {
@@ -433,6 +454,30 @@ if (suitOverlay) {
       closeSuitOverlay();
     }
   });
+}
+
+if (infoBtn) {
+  infoBtn.addEventListener("click", () => {
+    openInfoOverlay();
+  });
+}
+
+if (infoCloseBtn) {
+  infoCloseBtn.addEventListener("click", () => {
+    closeInfoOverlay();
+  });
+}
+
+if (infoOverlay) {
+  infoOverlay.addEventListener("click", (event) => {
+    if (event.target === infoOverlay) {
+      closeInfoOverlay();
+    }
+  });
+}
+
+if (infoContent) {
+  infoContent.innerHTML = renderInstructions("single-device");
 }
 
 if (suitNameInput) {

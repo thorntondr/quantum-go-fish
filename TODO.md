@@ -1,7 +1,7 @@
 - [ ] Revisit disconnection design
     - [ ] BUG: When we tried to host from the family PC or from Peter's chromebook, the other of the two was not able to join.  It appeared to put them in another room (see above).
 - [x] "Return Home" and "Leave Game" buttons seem redundant
-- [ ] Add an info button that shows full instructions on how to play the game
+- [x] Add an info button that shows full instructions on how to play the game
 - [x] BUG: If I type in another host's room id and press "Host" it opens a new room with the same id. Solution: Remove the ability for the Host to choose their own room code.
 - [ ] When both win conditions are met simultaneously by the same player, the Game Over message should reflect that.
 - [x] Better UI to let you know when it's your turn to ask or answer
