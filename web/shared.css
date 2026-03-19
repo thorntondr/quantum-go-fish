@@ -130,6 +130,20 @@ button {
   background: #f5faf7;
 }
 
+.button-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #b8cabf;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: #f5faf7;
+  color: var(--ink);
+  text-decoration: none;
+}
+
 button.primary {
   border-color: var(--accent);
   background: var(--accent);
@@ -137,6 +151,18 @@ button.primary {
 }
 
 button.alt {
+  border-color: var(--accent-2);
+  background: var(--accent-2);
+  color: #fff;
+}
+
+.button-link.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.button-link.alt {
   border-color: var(--accent-2);
   background: var(--accent-2);
   color: #fff;

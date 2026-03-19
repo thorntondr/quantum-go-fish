@@ -40,7 +40,8 @@ This runs TypeScript build + Node test suite (engine + session/protocol tests).
    ```bash
    npx serve .
    ```
-3. Open `web/index.html` from that server in your browser (do not use `file://`).
+3. Open `web/index.html` from that server in your browser for the default single-device mode (do not use `file://`).
+4. Open `web/multi_device_beta.html` for the host/join multiplayer beta UI.
 
 ## Multiplayer playtest flow (PeerJS Cloud)
 
@@ -71,8 +72,10 @@ After host starts game and assigns you a player, your move buttons enable only w
 - `src/engine/*`: deterministic game rules, moves, propagation, invariants
 - `src/app/*`: session protocol, controller, transport, history/hash
 - `src/ui/*`: state rendering utilities
-- `src/web/main.ts`: browser integration and controls
-- `web/index.html`: playtest interface
+- `src/web/main.ts`: multiplayer browser integration and controls
+- `src/web/singleDevice.ts`: single-device browser integration and controls
+- `web/index.html`: default single-device playtest interface
+- `web/multi_device_beta.html`: host/join multiplayer beta interface
 - `tests/*`: engine + replay + multiplayer protocol/controller tests
 
 ## Current limitations

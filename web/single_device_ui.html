@@ -2,91 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="refresh" content="0; url=./index.html">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Quantum Go Fish (Single Device)</title>
+  <title>Quantum Go Fish</title>
   <link rel="stylesheet" href="./shared.css">
 </head>
 <body>
   <div class="wrap">
     <section class="panel">
-      <h1>Quantum Go Fish (Single Device)</h1>
-      <p id="status" class="muted"></p>
-      <p id="turnActionNotice" class="callout callout--action" hidden></p>
-      <p id="pendingAskNotice" class="callout" hidden></p>
-      <p id="error" class="err"></p>
+      <h1>Quantum Go Fish</h1>
+      <p class="muted">The single-device page has moved.</p>
       <div class="controls-row" style="margin-top: 8px;">
-        <button id="infoBtn" class="alt">How to Play</button>
+        <a href="./index.html" class="button-link primary">Go To Single-Device Mode</a>
+        <a href="./multi_device_beta.html" class="button-link">Go To Multi-Device Beta</a>
       </div>
-    </section>
-
-    <section class="panel">
-      <h2>Roster</h2>
-      <label>
-        Players (comma or newline separated)
-        <textarea id="rosterInput">Alice, Bob, Cara</textarea>
-      </label>
-      <div class="controls-row" style="margin-top: 10px;">
-        <button id="startBtn" class="primary">Start Game</button>
-      </div>
-    </section>
-
-    <section class="panel">
-      <h2>Moves</h2>
-      <div class="controls-row">
-        <label>
-          Ask target
-          <select id="askTarget"></select>
-        </label>
-        <label>
-          Suit
-          <select id="askSuit"></select>
-        </label>
-        <button id="askBtn" class="primary">Ask</button>
-        <button id="yesBtn">Answer Yes</button>
-        <button id="noBtn">Answer No</button>
-      </div>
-    </section>
-
-    <section class="panel">
-      <h2>Game State</h2>
-      <div id="state"></div>
     </section>
   </div>
-
-  <div id="suitOverlay" class="overlay">
-    <div class="overlay-panel">
-      <h3>Customize Suit</h3>
-      <p id="suitOverlayLabel" class="muted"></p>
-      <label>
-        Name
-        <input id="suitNameInput" type="text" placeholder="e.g., Moons">
-      </label>
-      <label>
-        Symbol (emoji)
-        <input id="suitSymbolInput" type="text" placeholder="e.g., 🌙">
-      </label>
-      <div id="emojiSuggestions" class="emoji-suggestions"></div>
-      <label>
-        Color
-        <input id="suitColorInput" type="color" value="#d6d9de">
-      </label>
-      <div class="overlay-actions">
-        <button id="suitSaveBtn" class="primary">Save</button>
-        <button id="suitCancelBtn">Cancel</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="infoOverlay" class="overlay" hidden>
-    <div class="overlay-panel overlay-panel--wide">
-      <h3>How to Play</h3>
-      <div id="infoContent" class="instructions-copy"></div>
-      <div class="overlay-actions">
-        <button id="infoCloseBtn" class="primary">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <script type="module" src="../dist/src/web/singleDevice.js"></script>
 </body>
 </html>

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quantum Go Fish Multiplayer (Beta)</title>
+  <link rel="stylesheet" href="./shared.css">
+</head>
+<body>
+  <div class="wrap">
+    <section class="panel">
+      <h1>Quantum Go Fish Multiplayer (Beta)</h1>
+      <p class="muted">Host or join a room across multiple devices.</p>
+      <p id="status" class="muted"></p>
+      <p id="turnActionNotice" class="callout callout--action" hidden></p>
+      <p id="pendingAskNotice" class="callout" hidden></p>
+      <p id="pauseNotice" class="muted"></p>
+      <p id="sessionError" class="err"></p>
+      <p id="moveError" class="err"></p>
+      <div id="sessionActions" class="controls-row" style="margin-top: 8px;" hidden>
+        <button id="playAgainBtn" class="alt" style="display: none;">Play Again</button>
+        <button id="leaveGameBtn">Leave Game</button>
+      </div>
+      <div class="controls-row" style="margin-top: 8px;">
+        <button id="infoBtn" class="alt">How to Play</button>
+        <a href="./index.html" class="button-link">Single-Device Mode</a>
+      </div>
+    </section>
+
+    <section id="screenLanding" class="panel screen active">
+      <h2>Start or Join</h2>
+      <div class="controls-row" style="margin-bottom: 10px;">
+        <label>
+          Your Name
+          <input id="friendlyName" type="text" value="Player">
+        </label>
+        <button id="hostBtn" class="primary">Host</button>
+      </div>
+      <div class="controls-row">
+        <label>
+          Room Code to Join
+          <input id="roomCode" type="text" placeholder="Enter a host's room code">
+        </label>
+        <button id="joinBtn" class="alt">Join</button>
+      </div>
+      <p class="muted">Hosting creates a new room code to share. To join, enter a host's room code.</p>
+    </section>
+
+    <section id="screenWaiting" class="panel screen">
+      <h2>Waiting Room</h2>
+      <p class="muted">Room code: <strong id="waitingRoomCode">-</strong></p>
+      <div class="controls-row" style="margin-top: 6px;">
+        <button id="shareRoomBtn" class="alt">Share Link</button>
+        <input id="shareRoomLink" type="text" readonly value="">
+      </div>
+      <div class="grid-2" style="margin-top: 12px;">
+        <section class="panel" style="margin: 0;">
+          <h2>Connected Players</h2>
+          <ul id="waitingRoster" class="roster-list"></ul>
+        </section>
+        <section class="panel" style="margin: 0;">
+          <h2>Event Log</h2>
+          <pre id="eventLog"></pre>
+        </section>
+      </div>
+      <div class="controls-row" style="margin-top: 12px;">
+        <button id="waitingStartGameBtn" class="primary">Start Game</button>
+      </div>
+    </section>
+
+    <section id="screenGame" class="screen">
+      <section class="panel">
+        <h2>Moves</h2>
+        <div class="controls-row">
+          <label>
+            Ask target
+            <select id="askTarget"></select>
+          </label>
+          <label>
+            Suit
+            <select id="askSuit"></select>
+          </label>
+          <button id="askBtn" class="primary">Ask</button>
+          <button id="yesBtn">Answer Yes</button>
+          <button id="noBtn">Answer No</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Game State</h2>
+        <div id="state"></div>
+      </section>
+    </section>
+  </div>
+
+  <div id="suitOverlay" class="overlay">
+    <div class="overlay-panel">
+      <h3>Customize Suit</h3>
+      <p id="suitOverlayLabel" class="muted"></p>
+      <label>
+        Name
+        <input id="suitNameInput" type="text" placeholder="e.g., Moons">
+      </label>
+      <label>
+        Symbol (emoji)
+        <input id="suitSymbolInput" type="text" placeholder="e.g., ðŸŒ™">
+      </label>
+      <div id="emojiSuggestions" class="emoji-suggestions"></div>
+      <label>
+        Color
+        <input id="suitColorInput" type="color" value="#d6d9de">
+      </label>
+      <div class="overlay-actions">
+        <button id="suitSaveBtn" class="primary">Save</button>
+        <button id="suitCancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="infoOverlay" class="overlay" hidden>
+    <div class="overlay-panel overlay-panel--wide">
+      <h3>How to Play</h3>
+      <div id="infoContent" class="instructions-copy"></div>
+      <div class="overlay-actions">
+        <button id="infoCloseBtn" class="primary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+  <script type="module" src="../dist/src/web/main.js"></script>
+</body>
+</html>
