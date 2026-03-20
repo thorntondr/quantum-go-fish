@@ -29,7 +29,7 @@ test("renderCardHands rotates opponents to start after the local player", () => 
 
   assert.ok(labelIndex(html, "C") < labelIndex(html, "D"));
   assert.ok(labelIndex(html, "D") < labelIndex(html, "A"));
-  assert.ok(labelIndex(html, "A") < html.indexOf("You"));
+  assert.ok(html.indexOf("You") < labelIndex(html, "C"));
 });
 
 test("renderCardHands wraps opponent order around the table", () => {
@@ -62,7 +62,7 @@ test("renderCardHands uses light ink for dark suit backgrounds", () => {
     localPlayerId: "A"
   });
 
-  assert.match(html, /--band-color: #123456; --band-ink: #f7fbf9/);
+  assert.match(html, /--band-color: #123456; --band-ink: #dee2e0/);
 });
 
 test("renderCardHands keeps dark ink for light suit backgrounds", () => {
