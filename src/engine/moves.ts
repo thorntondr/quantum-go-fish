@@ -49,13 +49,17 @@ function detectWin(state: GameState, startPlayer: string): { winner: string; rea
   }
 
   const guaranteedWinner = detectGuaranteedSetWinner(state, startPlayer);
-  if (guaranteedWinner) {
-    return { winner: guaranteedWinner, reason: "GuaranteedFourOfSuit" };
-  }
-
   const allCardsKnown = activePlayers(state).every((player) =>
     state.suits.every((suit) => state.min[player][suit] === state.max[player][suit])
   );
+
+  if (guaranteedWinner) {
+    if (allCardsKnown && guaranteedWinner === startPlayer) {
+      return { winner: guaranteedWinner, reason: "GuaranteedFourOfSuitAndAllCardsKnown" };
+    }
+    return { winner: guaranteedWinner, reason: "GuaranteedFourOfSuit" };
+  }
+
   if (allCardsKnown) {
     return { winner: startPlayer, reason: "AllCardsKnown" };
   }

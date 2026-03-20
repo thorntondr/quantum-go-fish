@@ -14,7 +14,11 @@ export type TurnPhase =
   | "NextTurn"
   | "GameOver";
 
-export type WinReason = "GuaranteedFourOfSuit" | "AllCardsKnown" | "NotEnoughPlayers";
+export type WinReason =
+  | "GuaranteedFourOfSuit"
+  | "AllCardsKnown"
+  | "GuaranteedFourOfSuitAndAllCardsKnown"
+  | "NotEnoughPlayers";
 
 export interface PendingAsk {
   asker: PlayerId;

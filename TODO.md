@@ -3,7 +3,7 @@
 - [x] "Return Home" and "Leave Game" buttons seem redundant
 - [x] Add an info button that shows full instructions on how to play the game
 - [x] BUG: If I type in another host's room id and press "Host" it opens a new room with the same id. Solution: Remove the ability for the Host to choose their own room code.
-- [ ] When both win conditions are met simultaneously by the same player, the Game Over message should reflect that.
+- [x] When both win conditions are met simultaneously by the same player, the Game Over message should reflect that.
 - [x] Better UI to let you know when it's your turn to ask or answer
 - [x] Clearer indication of game over state
 - [x] The display of other player's hands should start with the player who goes after you, rather than starting with the host player on every device.

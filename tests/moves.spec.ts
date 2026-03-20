@@ -83,6 +83,34 @@ test("Current player wins when all card suits become known", () => {
   assert.equal(next.turnState.winReason, "AllCardsKnown");
 });
 
+test("Current player win reason reflects both win conditions when both happen simultaneously", () => {
+  const config: SetupConfig = {
+    players: ["A", "B"],
+    suits: ["S1", "S2"],
+    suitTotals: { S1: 4, S2: 4 },
+    handSizes: { A: 4, B: 4 },
+    startingPlayer: "A"
+  };
+
+  let state = createInitialState(config);
+  state.min.A.S1 = 3;
+  state.max.A.S1 = 4;
+  state.min.A.S2 = 0;
+  state.max.A.S2 = 1;
+  state.min.B.S1 = 0;
+  state.max.B.S1 = 1;
+  state.min.B.S2 = 3;
+  state.max.B.S2 = 4;
+
+  state = applyMove(state, { kind: "Ask", asker: "A", target: "B", suit: "S1" });
+  const next = applyMove(state, { kind: "AnswerYes", target: "B", suit: "S1"})
+
+  assert.equal(next.turnState.phase, "GameOver");
+  assert.equal(next.turnState.currentPlayer, "A");
+  assert.equal(next.turnState.winner, "A");
+  assert.equal(next.turnState.winReason, "GuaranteedFourOfSuitAndAllCardsKnown");
+});
+
 test("Non-current player wins immediately if they already have guaranteed four of a suit", () => {
   let state = makeState();
   state.min.B.S = 4;
@@ -107,7 +135,7 @@ test("If multiple players have guaranteed fours, winner follows turn order from 
 
   assert.equal(next.turnState.phase, "GameOver");
   assert.equal(next.turnState.winner, "B");
-  assert.equal(next.turnState.winReason, "GuaranteedFourOfSuit");
+  assert.equal(next.turnState.winReason, "GuaranteedFourOfSuitAndAllCardsKnown");
 });
 
 test("AnswerYes skips the next player when they run out of cards", () => {
