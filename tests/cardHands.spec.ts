@@ -114,3 +114,15 @@ test("renderCardHands marks the asker and answerer with distinct hand classes", 
   assert.match(html, /hand hand--self hand--asker/);
   assert.match(html, /<section class="hand hand--answerer">\s*<div class="hand-label">C<\/div>/);
 });
+
+test("renderCardHands highlights the selected ask target before an answer is pending", () => {
+  const html = renderCardHands(createInitialState(config), {
+    formatPlayer: (playerId) => playerId,
+    getSuitMeta: () => undefined,
+    localPlayerId: "A",
+    askingPlayerId: "A",
+    selectedTargetPlayerId: "D"
+  });
+
+  assert.match(html, /<section class="hand hand--selected-target">\s*<div class="hand-label">D<\/div>/);
+});

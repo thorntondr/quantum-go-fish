@@ -43,6 +43,7 @@ const infoContent = getEl("infoContent");
 let state: GameState | undefined;
 let suitMetaById = new Map<string, SuitMeta>();
 let viewPlayerId: string | undefined;
+let selectedAskTarget: string | undefined;
 
 function setError(message: string): void {
   errorRoot.textContent = message;
@@ -252,6 +253,7 @@ function refreshControls(current: GameState): void {
   askTarget.innerHTML = targets.map((target) => `<option value="${target}">${target}</option>`).join("");
   askTarget.value = selectedTarget;
   const askEnabled = !pending && askMoves.length > 0;
+  selectedAskTarget = askEnabled ? selectedTarget : undefined;
 
   const suits = askMoves.filter((m) => m.target === selectedTarget).map((m) => m.suit);
   askSuit.innerHTML = suits.map((suit) => `<option value="${suit}">${formatSuit(suit)}</option>`).join("");
@@ -294,6 +296,7 @@ function render(): void {
       formatSuit,
       getSuitMeta,
       localPlayerId: viewPlayerId,
+      selectedTargetPlayerId: selectedAskTarget,
       statusText
     }
   );

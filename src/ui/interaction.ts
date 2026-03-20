@@ -12,6 +12,7 @@ export interface RenderOptions {
   formatSuit?: (suitId: string) => string;
   getSuitMeta?: (suitId: string) => SuitMeta | undefined;
   localPlayerId?: string;
+  selectedTargetPlayerId?: string;
   statusText?: string;
 }
 
@@ -58,6 +59,7 @@ export function renderState(
     localPlayerId: options.localPlayerId,
     askingPlayerId,
     answeringPlayerId,
+    selectedTargetPlayerId: options.selectedTargetPlayerId,
     winnerPlayerId: winner
   });
   const tableHtml = renderPaperclipTable(state, formatPlayer, options.formatSuit);

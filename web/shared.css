@@ -326,7 +326,8 @@ pre {
 }
 
 .hand--asker,
-.hand--answerer {
+.hand--answerer,
+.hand--selected-target {
   padding: 10px 16px 18px;
   border-radius: 16px;
   transform: translateY(-4px);
@@ -350,6 +351,16 @@ pre {
 
 .hand--answerer .hand-label {
   color: #694500;
+}
+
+.hand--selected-target {
+  outline: 3px dashed rgba(194, 152, 50, 0.7);
+  outline-offset: 4px;
+  box-shadow: 0 10px 22px rgba(160, 117, 16, 0.12);
+}
+
+.hand--selected-target .hand-label {
+  color: #7b5608;
 }
 
 .hand--winner {

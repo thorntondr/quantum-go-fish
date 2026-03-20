@@ -73,6 +73,7 @@ type SuitMeta = SessionSuitMeta;
 let suitMetaById = new Map<string, SuitMeta>();
 let playerStatusById = new Map<string, string>();
 let currentRoomCode = "";
+let selectedAskTarget: string | undefined;
 
 const STORAGE_KEY = "qgf-session-v1";
 const ENABLE_SESSION_RESTORE = false;
@@ -407,6 +408,7 @@ function refreshControls(current: GameState): void {
     .map((target) => `<option value="${target}">${formatPlayer(target)}</option>`)
     .join("");
   askTarget.value = selectedTarget;
+  selectedAskTarget = askAllowed ? selectedTarget : undefined;
 
   const suits = askMoves.filter((m) => m.target === selectedTarget).map((m) => m.suit);
   askSuit.innerHTML = suits.map((suit) => `<option value="${suit}">${formatSuit(suit)}</option>`).join("");
@@ -482,7 +484,8 @@ function render(): void {
     formatPlayer,
     formatSuit,
     getSuitMeta,
-    localPlayerId: assignedPlayer
+    localPlayerId: assignedPlayer,
+    selectedTargetPlayerId: selectedAskTarget
   });
   refreshTurnActionNotice(state);
   refreshPendingAskNotice(state);

@@ -12,6 +12,7 @@ export interface RenderCardsOptions {
   localPlayerId?: PlayerId;
   askingPlayerId?: PlayerId;
   answeringPlayerId?: PlayerId;
+  selectedTargetPlayerId?: PlayerId;
   winnerPlayerId?: PlayerId;
 }
 
@@ -308,13 +309,14 @@ function renderCardStack(
 }
 
 export function renderCardHands(state: GameState, options: RenderCardsOptions): string {
-  const { formatPlayer, getSuitMeta, localPlayerId, askingPlayerId, answeringPlayerId, winnerPlayerId } = options;
+  const { formatPlayer, getSuitMeta, localPlayerId, askingPlayerId, answeringPlayerId, selectedTargetPlayerId, winnerPlayerId } = options;
   const displayedPlayers = rotatePlayersFromLocal(state.players, localPlayerId);
   const otherPlayers = localPlayerId ? displayedPlayers.filter((player) => player !== localPlayerId) : displayedPlayers;
   const handStateClasses = (playerId: PlayerId): string =>
     [
       askingPlayerId === playerId ? "hand--asker" : "",
       answeringPlayerId === playerId ? "hand--answerer" : "",
+      selectedTargetPlayerId === playerId ? "hand--selected-target" : "",
       winnerPlayerId === playerId ? "hand--winner" : ""
     ]
       .filter(Boolean)
