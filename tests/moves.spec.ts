@@ -109,3 +109,39 @@ test("If multiple players have guaranteed fours, winner follows turn order from 
   assert.equal(next.turnState.winner, "B");
   assert.equal(next.turnState.winReason, "GuaranteedFourOfSuit");
 });
+
+test("AnswerYes skips the next player when they run out of cards", () => {
+  let state = makeState();
+  state.handSizes.A = 4;
+  state.handSizes.B = 1;
+  state.handSizes.C = 7;
+
+  state = applyMove(state, { kind: "Ask", asker: "A", target: "B", suit: "S" });
+  const next = applyMove(state, { kind: "AnswerYes", target: "B", suit: "S" });
+
+  assert.equal(next.handSizes.B, 0);
+  assert.equal(next.turnState.phase, "Idle");
+  assert.equal(next.turnState.currentPlayer, "C");
+});
+
+test("Game ends when only one player has cards remaining", () => {
+  const config: SetupConfig = {
+    players: ["A", "B"],
+    suits: ["S1", "S2"],
+    suitTotals: { S1: 4, S2: 4 },
+    handSizes: { A: 4, B: 4 },
+    startingPlayer: "A"
+  };
+
+  let state = createInitialState(config);
+  state.handSizes.A = 7;
+  state.handSizes.B = 1;
+
+  state = applyMove(state, { kind: "Ask", asker: "A", target: "B", suit: "S1" });
+  const next = applyMove(state, { kind: "AnswerYes", target: "B", suit: "S1" });
+
+  assert.equal(next.handSizes.B, 0);
+  assert.equal(next.turnState.phase, "GameOver");
+  assert.equal(next.turnState.winner, "A");
+  assert.equal(next.turnState.winReason, "NotEnoughPlayers");
+});

@@ -25,6 +25,9 @@ export function isLegalMove(state: GameState, move: Move): LegalResult {
     if (isInactive(state, move.asker) || isInactive(state, move.target)) {
       return { ok: false, reason: "Ask illegal: inactive players may not ask or be asked." };
     }
+    if (state.handSizes[move.asker] <= 0) {
+      return { ok: false, reason: "Ask illegal: asker has no cards left." };
+    }
     if (move.asker === move.target) {
       return { ok: false, reason: "Player cannot ask themselves." };
     }

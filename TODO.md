@@ -13,7 +13,7 @@
     - [ ] All or nothing: When answering "Yes," you must transfer all of your cards of that suit.  This means that in addition to saying "Yes," you must also pick a number in the range [min, max].
     - [ ] Draw Pile: Add one extra suit to the deck and a draw pile of four cards.  When an oppoent says "No," you have to go fish.  The draw pile can be tracked in the game state and display as if it were an extra player, but it does not take turns.
         - [ ] How is the transfer accomplished?  Is one of the draw pile's potential suits randomly selected and collapsed before transfer?  Is there some way to transfer the possibilities of a card instead?
-- [ ] BUG: If a player runs out of cards, their turn should be skipped.
+- [x] BUG: If a player runs out of cards, their turn should be skipped.
 - [ ] [UI] Sort bands on unresolved cards.
 - [ ] [UI] New coloring for turn highlighting: Green for current asker, Yellow for current answerer.  This should match the coloring of the turn alerts at the top of the page.
 - [ ] [UI] Bigger symbol size in the center of the card, with size adjusting to not overflow the band height.

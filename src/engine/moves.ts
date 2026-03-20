@@ -6,7 +6,7 @@ import type { GameState, Move } from "./types.js";
 import type { WinReason } from "./types.js";
 
 function activePlayers(state: GameState): string[] {
-  return state.players.filter((player) => !state.inactivePlayers.includes(player));
+  return state.players.filter((player) => !state.inactivePlayers.includes(player) && state.handSizes[player] > 0);
 }
 
 function nextPlayer(state: GameState, current: string): string {
@@ -14,7 +14,7 @@ function nextPlayer(state: GameState, current: string): string {
   const idx = players.indexOf(current);
   for (let i = 1; i <= players.length; i += 1) {
     const candidate = players[(idx + i) % players.length];
-    if (!state.inactivePlayers.includes(candidate)) {
+    if (!state.inactivePlayers.includes(candidate) && state.handSizes[candidate] > 0) {
       return candidate;
     }
   }
@@ -31,7 +31,7 @@ function turnOrderFrom(state: GameState, startPlayer: string): string[] {
 
 function detectGuaranteedSetWinner(state: GameState, startPlayer: string): string | undefined {
   const ordered = turnOrderFrom(state, startPlayer).filter(
-    (player) => !state.inactivePlayers.includes(player)
+    (player) => !state.inactivePlayers.includes(player) && state.handSizes[player] > 0
   );
   for (const player of ordered) {
     const hasFourOfSuit = state.suits.some((suit) => state.min[player][suit] >= 4);
