@@ -12,7 +12,6 @@ export interface RenderOptions {
   formatSuit?: (suitId: string) => string;
   getSuitMeta?: (suitId: string) => SuitMeta | undefined;
   localPlayerId?: string;
-  highlightedPlayerId?: string;
   statusText?: string;
 }
 
@@ -47,11 +46,18 @@ export function renderState(
       return label === suitId ? undefined : { name: label };
     });
 
+  const askingPlayerId =
+    state.turnState.phase === "GameOver"
+      ? undefined
+      : (state.turnState.pendingAsk?.asker ?? state.turnState.currentPlayer);
+  const answeringPlayerId = state.turnState.phase === "GameOver" ? undefined : state.turnState.pendingAsk?.target;
+
   const cardHtml = renderCardHands(state, {
     formatPlayer,
     getSuitMeta,
     localPlayerId: options.localPlayerId,
-    highlightedPlayerId: options.highlightedPlayerId,
+    askingPlayerId,
+    answeringPlayerId,
     winnerPlayerId: winner
   });
   const tableHtml = renderPaperclipTable(state, formatPlayer, options.formatSuit);

@@ -101,3 +101,16 @@ test("renderCardHands sorts unresolved card bands by suit order for display", ()
   assert.ok(alpha < gamma);
   assert.ok(gamma < delta);
 });
+
+test("renderCardHands marks the asker and answerer with distinct hand classes", () => {
+  const html = renderCardHands(createInitialState(config), {
+    formatPlayer: (playerId) => playerId,
+    getSuitMeta: () => undefined,
+    localPlayerId: "A",
+    askingPlayerId: "A",
+    answeringPlayerId: "C"
+  });
+
+  assert.match(html, /hand hand--self hand--asker/);
+  assert.match(html, /<section class="hand hand--answerer">\s*<div class="hand-label">C<\/div>/);
+});

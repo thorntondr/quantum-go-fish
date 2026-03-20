@@ -10,7 +10,8 @@ export interface RenderCardsOptions {
   formatPlayer: (playerId: PlayerId) => string;
   getSuitMeta: (suitId: SuitId) => SuitMeta | undefined;
   localPlayerId?: PlayerId;
-  highlightedPlayerId?: PlayerId;
+  askingPlayerId?: PlayerId;
+  answeringPlayerId?: PlayerId;
   winnerPlayerId?: PlayerId;
 }
 
@@ -307,9 +308,17 @@ function renderCardStack(
 }
 
 export function renderCardHands(state: GameState, options: RenderCardsOptions): string {
-  const { formatPlayer, getSuitMeta, localPlayerId, highlightedPlayerId, winnerPlayerId } = options;
+  const { formatPlayer, getSuitMeta, localPlayerId, askingPlayerId, answeringPlayerId, winnerPlayerId } = options;
   const displayedPlayers = rotatePlayersFromLocal(state.players, localPlayerId);
   const otherPlayers = localPlayerId ? displayedPlayers.filter((player) => player !== localPlayerId) : displayedPlayers;
+  const handStateClasses = (playerId: PlayerId): string =>
+    [
+      askingPlayerId === playerId ? "hand--asker" : "",
+      answeringPlayerId === playerId ? "hand--answerer" : "",
+      winnerPlayerId === playerId ? "hand--winner" : ""
+    ]
+      .filter(Boolean)
+      .join(" ");
 
   return `
     <div class="hand-board">
@@ -317,7 +326,7 @@ export function renderCardHands(state: GameState, options: RenderCardsOptions): 
         localPlayerId
           ? `
         <div class="hands-self">
-          <section class="hand hand--self ${winnerPlayerId === localPlayerId ? "hand--winner" : ""}">
+          <section class="hand hand--self ${handStateClasses(localPlayerId)}">
             <div class="hand-label">You — ${formatPlayer(localPlayerId)}</div>
             ${renderCardStack(buildCardsForPlayer(state, localPlayerId), state.suits, getSuitMeta)}
           </section>
@@ -329,11 +338,7 @@ export function renderCardHands(state: GameState, options: RenderCardsOptions): 
         ${otherPlayers
           .map((playerId) => {
             const cards = buildCardsForPlayer(state, playerId);
-            const isHighlighted = highlightedPlayerId === playerId;
-            const isWinner = winnerPlayerId === playerId;
-            const handClass = ["hand", isHighlighted ? "hand--highlight" : "", isWinner ? "hand--winner" : ""]
-              .filter(Boolean)
-              .join(" ");
+            const handClass = ["hand", handStateClasses(playerId)].filter(Boolean).join(" ");
             return `
               <section class="${handClass}">
                 <div class="hand-label">${formatPlayer(playerId)}</div>

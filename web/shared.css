@@ -325,17 +325,31 @@ pre {
   box-shadow: 0 12px 24px rgba(15, 46, 33, 0.1);
 }
 
-.hand--highlight {
+.hand--asker,
+.hand--answerer {
   padding: 10px 16px 18px;
   border-radius: 16px;
-  background: rgba(214, 243, 228, 0.75);
-  border: 2px solid #1b7a4a;
-  box-shadow: 0 16px 26px rgba(27, 122, 74, 0.22);
   transform: translateY(-4px);
 }
 
-.hand--highlight .hand-label {
+.hand--asker {
+  background: rgba(214, 243, 228, 0.75);
+  border: 2px solid #1b7a4a;
+  box-shadow: 0 16px 26px rgba(27, 122, 74, 0.22);
+}
+
+.hand--asker .hand-label {
   color: #0f4f32;
+}
+
+.hand--answerer {
+  background: linear-gradient(135deg, rgba(255, 244, 207, 0.92) 0%, rgba(255, 231, 162, 0.86) 100%);
+  border: 2px solid #c29832;
+  box-shadow: 0 16px 26px rgba(160, 117, 16, 0.18);
+}
+
+.hand--answerer .hand-label {
+  color: #694500;
 }
 
 .hand--winner {
