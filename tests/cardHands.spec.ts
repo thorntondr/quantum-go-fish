@@ -74,3 +74,30 @@ test("renderCardHands keeps dark ink for light suit backgrounds", () => {
 
   assert.match(html, /--band-color: #f4e7a1; --band-ink: #1a2a24/);
 });
+
+test("renderCardHands sorts unresolved card bands by suit order for display", () => {
+  const state = createInitialState(config);
+  state.handSizes.A = 1;
+  state.handSizes.B = 5;
+  state.max.A.S1 = 1;
+  state.max.A.S2 = 0;
+  state.max.A.S3 = 2;
+  state.max.A.S4 = 2;
+
+  const html = renderCardHands(state, {
+    formatPlayer: (playerId) => playerId,
+    getSuitMeta: (suitId) =>
+      ({ S1: { name: "Alpha" }, S3: { name: "Gamma" }, S4: { name: "Delta" } })[suitId],
+    localPlayerId: "A"
+  });
+
+  const alpha = html.indexOf("Alpha");
+  const gamma = html.indexOf("Gamma");
+  const delta = html.indexOf("Delta");
+
+  assert.notEqual(alpha, -1);
+  assert.notEqual(gamma, -1);
+  assert.notEqual(delta, -1);
+  assert.ok(alpha < gamma);
+  assert.ok(gamma < delta);
+});

@@ -25,6 +25,21 @@ interface CardModel {
   bands: SuitId[];
 }
 
+function sortBandsForDisplay(bands: SuitId[], suits: SuitId[]): SuitId[] {
+  return [...bands].sort((a, b) => {
+    if (a === b) {
+      return 0;
+    }
+    if (a === UNKNOWN_SUIT_ID) {
+      return 1;
+    }
+    if (b === UNKNOWN_SUIT_ID) {
+      return -1;
+    }
+    return suits.indexOf(a) - suits.indexOf(b);
+  });
+}
+
 function rotatePlayersFromLocal(players: PlayerId[], localPlayerId?: PlayerId): PlayerId[] {
   if (!localPlayerId) {
     return players;
@@ -204,7 +219,7 @@ function renderFrontCard(card: CardModel, suits: SuitId[], getSuitMeta: (id: Sui
       </div>
     `;
   }
-  const bands = card.bands;
+  const bands = sortBandsForDisplay(card.bands, suits);
   const bandHtml = bands
     .filter((band) => band)
     .map((suit) => renderBand(suit, suits, getSuitMeta(suit), {
@@ -237,7 +252,7 @@ function renderBackCard(
       </div>
     `;
   }
-  const bands = card.bands;
+  const bands = sortBandsForDisplay(card.bands, suits);
   const bandHtml = bands
     .filter((band) => band)
     .map((suit) =>
