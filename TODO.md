@@ -14,11 +14,7 @@
     - [ ] Draw Pile: Add one extra suit to the deck and a draw pile of four cards.  When an oppoent says "No," you have to go fish.  The draw pile can be tracked in the game state and display as if it were an extra player, but it does not take turns.
         - [ ] How is the transfer accomplished?  Is one of the draw pile's potential suits randomly selected and collapsed before transfer?  Is there some way to transfer the possibilities of a card instead?
 - [ ] BUG: If a player runs out of cards, their turn should be skipped.
-
-## Audit follow-up
-
-- [x] Fix the single-device status line so its custom "awaiting answer" and "viewing player" message is not overwritten by the shared renderer.
-- [x] Remove unused `SessionMessage` and `PeerStatus` declarations from `src/app/sessionController.ts`.
-- [x] Remove or wire up unused UI/session helpers such as `src/ui/turnController.ts`, `src/ui/interaction.ts`'s exported `submitMove`, and the write-only `peerByClient` map if it is not needed.
-- [x] Decide whether `web/debug.html` should remain supported by `src/web/main.ts`, and either align it with the shared UI contract/styles or retire it.
-- [x] Add session-controller tests for `leave_game`, reconnect and seat-claim expiry, and `restartGame()` clearing per-game metadata.
+- [ ] [UI] Sort bands on unresolved cards.
+- [ ] [UI] New coloring for turn highlighting: Green for current asker, Yellow for current answerer.  This should match the coloring of the turn alerts at the top of the page.
+- [ ] [UI] Bigger symbol size in the center of the card, with size adjusting to not overflow the band height.
+- [ ] [UI] Change example suit name and emoji from Moons to Fish
