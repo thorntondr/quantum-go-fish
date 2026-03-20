@@ -17,4 +17,4 @@
 - [ ] [UI] Sort bands on unresolved cards.
 - [ ] [UI] New coloring for turn highlighting: Green for current asker, Yellow for current answerer.  This should match the coloring of the turn alerts at the top of the page.
 - [ ] [UI] Bigger symbol size in the center of the card, with size adjusting to not overflow the band height.
-- [ ] [UI] Change example suit name and emoji from Moons to Fish
+- [x] [UI] Change example suit name and emoji from Moons to Fish
