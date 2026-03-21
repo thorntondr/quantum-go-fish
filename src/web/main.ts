@@ -161,15 +161,18 @@ function refreshTurnActionNotice(current: GameState): void {
     return;
   }
   if (canAnswer(current).yes || canAnswer(current).no) {
+    turnActionNotice.classList.add("callout--action");
     turnActionNotice.textContent = "Your turn to answer.";
     turnActionNotice.hidden = false;
     return;
   }
   if (canAsk(current)) {
+    turnActionNotice.classList.remove("callout--action");
     turnActionNotice.textContent = "Your turn to ask.";
     turnActionNotice.hidden = false;
     return;
   }
+  turnActionNotice.classList.add("callout--action");
   turnActionNotice.textContent = "";
   turnActionNotice.hidden = true;
 }

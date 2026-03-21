@@ -95,10 +95,12 @@ function refreshTurnActionNotice(current: GameState): void {
   }
   const pending = current.turnState.pendingAsk;
   if (pending) {
+    turnActionNotice.classList.add("callout--action");
     turnActionNotice.textContent = `${formatPlayer(pending.target)}'s turn to answer.`;
     turnActionNotice.hidden = false;
     return;
   }
+  turnActionNotice.classList.remove("callout--action");
   turnActionNotice.textContent = `${formatPlayer(current.turnState.currentPlayer)}'s turn to ask.`;
   turnActionNotice.hidden = false;
 }
