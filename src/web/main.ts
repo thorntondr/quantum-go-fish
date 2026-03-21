@@ -86,6 +86,10 @@ function appendLog(message: string): void {
   eventLogRoot.scrollTop = eventLogRoot.scrollHeight;
 }
 
+function clearEventLog(): void {
+  eventLogRoot.textContent = "";
+}
+
 function setSessionError(message: string): void {
   sessionErrorRoot.textContent = message;
 }
@@ -560,6 +564,7 @@ function closeSession(): void {
   if (shareRoomBtn) {
     shareRoomBtn.disabled = true;
   }
+  clearEventLog();
   setScreen("landing");
 }
 
@@ -623,6 +628,7 @@ async function initSession(options: {
 }): Promise<void> {
   clearErrors();
   closeSession();
+  clearEventLog();
 
   currentRole = options.role;
   const hostCode = options.hostCode.trim();

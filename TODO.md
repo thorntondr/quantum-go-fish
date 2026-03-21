@@ -9,7 +9,7 @@
 - [ ] [Bug] [Multi] Cannot leave empty waiting room; error says there is no active game to leave
 - [ ] [UI] [Multi] When a non-host player leaves an active game, there should be some sort of notification in remaining active players' UI
 - [x] [UI] [Multi] Hide waiting room event log by default.
-- [ ] [Multi] Event log should start empty in a new waiting room
+- [x] [Multi] Event log should start empty in a new waiting room
 - [ ] [UI] [Multi] Show room code during active game
 - [ ] List pros/cons of splitting multi-device experience into multiple pages (landing, waiting, playing)
 - [ ] [Workflow] build
