@@ -736,6 +736,7 @@ if (hostBtn && friendlyNameInput) {
   hostBtn.addEventListener("click", () => {
     const name = friendlyNameInput.value.trim() || "Player";
     const hostCode = randomHostCode();
+    clearErrors();
     void initSession({
       role: "host",
       hostCode,
@@ -755,6 +756,7 @@ if (joinBtn && friendlyNameInput && roomCodeInput) {
       return;
     }
     const name = friendlyNameInput.value.trim() || "Player";
+    clearErrors();
     void initSession({
       role: "peer",
       hostCode,
@@ -772,6 +774,7 @@ if (waitingStartGameBtn) {
       setSessionError("Only the host can start the game.");
       return;
     }
+    clearErrors();
     hostSession.startGame();
   });
 }
@@ -789,12 +792,14 @@ if (playAgainBtn) {
 if (leaveGameBtn) {
   leaveGameBtn.addEventListener("click", () => {
     if (peerSession) {
+      clearErrors();
       peerSession.leaveGame();
       clearStoredSession();
       closeSession();
       return;
     }
     if (hostSession) {
+      clearErrors();
       clearStoredSession();
       closeSession();
       return;
@@ -802,6 +807,7 @@ if (leaveGameBtn) {
     const inSessionScreen =
       screenWaiting?.classList.contains("active") === true || screenGame?.classList.contains("active") === true;
     if (currentRole || inSessionScreen || Boolean(currentRoomCode)) {
+      clearErrors();
       clearStoredSession();
       closeSession();
       return;
