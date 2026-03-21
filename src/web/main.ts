@@ -31,6 +31,7 @@ const hostBtn = getEl("hostBtn") as HTMLButtonElement | null;
 const roomCodeInput = getEl("roomCode") as HTMLInputElement | null;
 const joinBtn = getEl("joinBtn") as HTMLButtonElement | null;
 const waitingRoomCode = getEl("waitingRoomCode");
+const gameRoomCode = getEl("gameRoomCode");
 const waitingRoster = getEl("waitingRoster");
 const waitingStartGameBtn = getEl("waitingStartGameBtn") as HTMLButtonElement | null;
 const shareRoomBtn = getEl("shareRoomBtn") as HTMLButtonElement | null;
@@ -593,6 +594,9 @@ function setWaitingRoomCode(code: string): void {
   currentRoomCode = code;
   if (waitingRoomCode) {
     waitingRoomCode.textContent = code;
+  }
+  if (gameRoomCode) {
+    gameRoomCode.textContent = code;
   }
   if (shareRoomLink) {
     const url = new URL(window.location.href);

@@ -10,7 +10,7 @@
 - [ ] [UI] [Multi] When a non-host player leaves an active game, there should be some sort of notification in remaining active players' UI
 - [x] [UI] [Multi] Hide waiting room event log by default.
 - [x] [Multi] Event log should start empty in a new waiting room
-- [ ] [UI] [Multi] Show room code during active game
+- [x] [UI] [Multi] Show room code during active game
 - [ ] List pros/cons of splitting multi-device experience into multiple pages (landing, waiting, playing)
 - [ ] [Workflow] build
 Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/configure-pages@v5, actions/setup-node@v4, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
