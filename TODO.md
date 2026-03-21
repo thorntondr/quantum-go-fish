@@ -13,9 +13,15 @@
     - [ ] All or nothing: When answering "Yes," you must transfer all of your cards of that suit.  This means that in addition to saying "Yes," you must also pick a number in the range [min, max].
     - [ ] Draw Pile: Add one extra suit to the deck and a draw pile of four cards.  When an oppoent says "No," you have to go fish.  The draw pile can be tracked in the game state and display as if it were an extra player, but it does not take turns.
         - [ ] How is the transfer accomplished?  Is one of the draw pile's potential suits randomly selected and collapsed before transfer?  Is there some way to transfer the possibilities of a card instead?
-- [x] BUG: If a player runs out of cards, their turn should be skipped.
+- [x] [BUG] If a player runs out of cards, their turn should be skipped.
 - [x] [UI] Sort bands on unresolved cards.
 - [x] [UI] New coloring for turn highlighting: Green for current asker, Yellow for current answerer.  This should match the coloring of the turn alerts at the top of the page.
 - [x] [UI] Bigger symbol size in the center of the card, with size adjusting to not overflow the band height.
 - [x] [UI] Change example suit name and emoji from Moons to Fish
 - [ ] [UI] Cards only fit 6 or 7 suits, depending on hand display size.  Increase card height when 7 suits or more are in play.
+- [ ] [Bug] [Multi] Cannot leave empty waiting room; error says there is no active game to leave
+- [ ] [UI] [Multi] When a non-host player leaves an active game, there should be some sort of notification in remaining active players' UI
+- [ ] [UI] [Multi] Hide waiting room event log by default.
+- [ ] [Multi] Event log should start empty in a new waiting room
+- [ ] [UI] [Multi] Show room code during active game
+- [ ] List pros/cons of splitting multi-device experience into multiple pages (landing, waiting, playing)
