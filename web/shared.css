@@ -53,6 +53,11 @@ h2 {
   font-size: 1.05rem;
 }
 
+h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
 p {
   margin: 6px 0;
 }
@@ -221,6 +226,23 @@ pre {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #f8fcf9;
+}
+
+.landing-shared {
+  background:
+    linear-gradient(135deg, rgba(242, 250, 246, 0.95) 0%, rgba(235, 243, 250, 0.92) 100%);
+}
+
+.landing-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: space-between;
+  min-height: 100%;
+}
+
+.landing-choice button {
+  align-self: flex-start;
 }
 
 .overlay {

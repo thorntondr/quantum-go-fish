@@ -30,26 +30,27 @@
 
     <section id="screenLanding" class="panel screen active">
       <h2>Join or Start</h2>
-      <div class="controls-row" style="margin-bottom: 10px;">
+      <section class="landing-shared panel" style="margin-top: 12px; margin-bottom: 0;">
         <label>
-          Your Name
+          Your Display Name
           <input id="friendlyName" type="text" placeholder="Player">
         </label>
-      </div>
-      <div class="controls-row" style="margin-bottom: 15px;">
-        <label>
-          Room Code
-          <input id="roomCode" type="text" placeholder="Enter a host's room code">
-        </label>
-        <button id="joinBtn" class="alt">Join</button>
-      </div>
-      <div class="controls-row" style="margin-bottom: 10px;">
-        <label>
-          Or host your own room
-        </label>
-      </div>
-      <div class="controls-row" style="margin-bottom: 0px;">
-        <button id="hostBtn" class="primary">Host</button>
+      </section>
+      <div class="grid-2" style="margin-top: 12px;">
+        <section class="panel landing-choice" style="margin: 0;">
+          <h3>Join an Existing Room</h3>
+          <p class="muted">Use a room code from the player who is hosting.</p>
+          <label>
+            Room Code
+            <input id="roomCode" type="text" placeholder="Enter a host's room code">
+          </label>
+          <button id="joinBtn" class="alt">Join</button>
+        </section>
+        <section class="panel landing-choice" style="margin: 0;">
+          <h3>Host a New Room</h3>
+          <p class="muted">Create a fresh room code to share with the other players.</p>
+          <button id="hostBtn" class="primary">Host</button>
+        </section>
       </div>
     </section>
 
