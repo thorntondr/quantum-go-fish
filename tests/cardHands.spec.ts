@@ -12,6 +12,14 @@ const config: SetupConfig = {
   startingPlayer: "A"
 };
 
+const sevenSuitConfig: SetupConfig = {
+  players: ["A", "B", "C", "D", "E", "F", "G"],
+  suits: ["S1", "S2", "S3", "S4", "S5", "S6", "S7"],
+  suitTotals: { S1: 4, S2: 4, S3: 4, S4: 4, S5: 4, S6: 4, S7: 4 },
+  handSizes: { A: 4, B: 4, C: 4, D: 4, E: 4, F: 4, G: 4 },
+  startingPlayer: "A"
+};
+
 function render(localPlayerId?: string): string {
   return renderCardHands(createInitialState(config), {
     formatPlayer: (playerId) => playerId,
@@ -112,7 +120,7 @@ test("renderCardHands marks the asker and answerer with distinct hand classes", 
   });
 
   assert.match(html, /hand hand--self hand--asker/);
-  assert.match(html, /<section class="hand hand--answerer">\s*<div class="hand-label">C<\/div>/);
+  assert.match(html, /<section class="hand hand--answerer"\s*>\s*<div class="hand-label">C<\/div>/);
 });
 
 test("renderCardHands highlights the selected ask target before an answer is pending", () => {
@@ -124,7 +132,7 @@ test("renderCardHands highlights the selected ask target before an answer is pen
     selectedTargetPlayerId: "D"
   });
 
-  assert.match(html, /<section class="hand hand--selected-target">\s*<div class="hand-label">D<\/div>/);
+  assert.match(html, /<section class="hand hand--selected-target"\s*>\s*<div class="hand-label">D<\/div>/);
 });
 
 test("renderCardHands scales center symbol size based on band count", () => {
@@ -156,4 +164,14 @@ test("renderCardHands scales center symbol size based on band count", () => {
 
   assert.match(singleBandHtml, /--band-symbol-size: 3.3rem/);
   assert.match(multiBandHtml, /--band-symbol-size: 1.6rem/);
+});
+
+test("renderCardHands increases card height when seven suits are in play", () => {
+  const html = renderCardHands(createInitialState(sevenSuitConfig), {
+    formatPlayer: (playerId) => playerId,
+    getSuitMeta: () => undefined,
+    localPlayerId: "A"
+  });
+
+  assert.match(html, /--card-height: calc\(var\(--card-width\) \* 16 \/ 9\);/);
 });

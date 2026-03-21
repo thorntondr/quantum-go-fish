@@ -42,6 +42,16 @@ function sortBandsForDisplay(bands: SuitId[], suits: SuitId[]): SuitId[] {
   });
 }
 
+function handSizingStyle(suitCount: number): string {
+  if (suitCount >= 8) {
+    return "--card-height: calc(var(--card-width) * 2);";
+  }
+  if (suitCount >= 7) {
+    return "--card-height: calc(var(--card-width) * 16 / 9);";
+  }
+  return "";
+}
+
 function rotatePlayersFromLocal(players: PlayerId[], localPlayerId?: PlayerId): PlayerId[] {
   if (!localPlayerId) {
     return players;
@@ -326,6 +336,7 @@ export function renderCardHands(state: GameState, options: RenderCardsOptions): 
   const { formatPlayer, getSuitMeta, localPlayerId, askingPlayerId, answeringPlayerId, selectedTargetPlayerId, winnerPlayerId } = options;
   const displayedPlayers = rotatePlayersFromLocal(state.players, localPlayerId);
   const otherPlayers = localPlayerId ? displayedPlayers.filter((player) => player !== localPlayerId) : displayedPlayers;
+  const handStyle = handSizingStyle(state.suits.length);
   const handStateClasses = (playerId: PlayerId): string =>
     [
       askingPlayerId === playerId ? "hand--asker" : "",
@@ -342,7 +353,7 @@ export function renderCardHands(state: GameState, options: RenderCardsOptions): 
         localPlayerId
           ? `
         <div class="hands-self">
-          <section class="hand hand--self ${handStateClasses(localPlayerId)}">
+          <section class="hand hand--self ${handStateClasses(localPlayerId)}" ${handStyle ? `style="${handStyle}"` : ""}>
             <div class="hand-label">You — ${formatPlayer(localPlayerId)}</div>
             ${renderCardStack(buildCardsForPlayer(state, localPlayerId), state.suits, getSuitMeta)}
           </section>
@@ -356,7 +367,7 @@ export function renderCardHands(state: GameState, options: RenderCardsOptions): 
             const cards = buildCardsForPlayer(state, playerId);
             const handClass = ["hand", handStateClasses(playerId)].filter(Boolean).join(" ");
             return `
-              <section class="${handClass}">
+              <section class="${handClass}" ${handStyle ? `style="${handStyle}"` : ""}>
                 <div class="hand-label">${formatPlayer(playerId)}</div>
                 ${renderCardStack(cards, state.suits, getSuitMeta)}
               </section>
