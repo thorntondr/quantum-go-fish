@@ -19,6 +19,6 @@ Node.js 20 actions are deprecated. The following actions are running on Node.js 
 - [ ] [Workflow] Skip build and redeploy if the only changes are to files at the project root
 - [ ] [UI] [BUG] Bands on front card in other player's hands overflow for six suits or more.
 - [x] [UI] Remove/hide "Turn: ..." message on screens other than active game
-- [ ] [UI] Remove/hide "Host or join a room across multiple devices" message on active game screen
+- [x] [UI] Remove/hide "Host or join a room across multiple devices" message on active game screen
 - [ ] [UI] Clear error message(s) upon successful Host, Join, Start Game, or Leave Game
 - [ ] [UI] Hide mode switch button except on their respective landing pages

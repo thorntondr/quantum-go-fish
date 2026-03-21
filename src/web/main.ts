@@ -16,6 +16,7 @@ import { renderState } from "../ui/interaction.js";
 
 const stateRoot = requireEl("state");
 const statusRoot = requireEl("status");
+const headerSubtitle = getEl("headerSubtitle");
 const turnActionNotice = getEl("turnActionNotice");
 const pendingAskNotice = getEl("pendingAskNotice");
 const pauseNotice = getEl("pauseNotice");
@@ -574,6 +575,9 @@ function setScreen(target: "landing" | "waiting" | "game"): void {
     return;
   }
   statusRoot.hidden = target !== "game";
+  if (headerSubtitle) {
+    headerSubtitle.hidden = target === "game";
+  }
   if (sessionActions) {
     sessionActions.hidden = target === "landing";
   }
