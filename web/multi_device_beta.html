@@ -29,22 +29,28 @@
     </section>
 
     <section id="screenLanding" class="panel screen active">
-      <h2>Start or Join</h2>
+      <h2>Join or Start</h2>
       <div class="controls-row" style="margin-bottom: 10px;">
         <label>
           Your Name
-          <input id="friendlyName" type="text" value="Player">
+          <input id="friendlyName" type="text" placeholder="Player">
         </label>
-        <button id="hostBtn" class="primary">Host</button>
       </div>
-      <div class="controls-row">
+      <div class="controls-row" style="margin-bottom: 15px;">
         <label>
-          Room Code to Join
+          Room Code
           <input id="roomCode" type="text" placeholder="Enter a host's room code">
         </label>
         <button id="joinBtn" class="alt">Join</button>
       </div>
-      <p class="muted">Hosting creates a new room code to share. To join, enter a host's room code.</p>
+      <div class="controls-row" style="margin-bottom: 10px;">
+        <label>
+          Or host your own room
+        </label>
+      </div>
+      <div class="controls-row" style="margin-bottom: 0px;">
+        <button id="hostBtn" class="primary">Host</button>
+      </div>
     </section>
 
     <section id="screenWaiting" class="panel screen">
