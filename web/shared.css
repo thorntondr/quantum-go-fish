@@ -183,6 +183,17 @@ pre {
   color: #1d3b30;
 }
 
+.log-panel summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #2a4b3f;
+  margin-bottom: 10px;
+}
+
+.log-panel[open] summary {
+  margin-bottom: 12px;
+}
+
 .grid-2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
