@@ -794,7 +794,9 @@ if (leaveGameBtn) {
       closeSession();
       return;
     }
-    if (currentRole) {
+    const inSessionScreen =
+      screenWaiting?.classList.contains("active") === true || screenGame?.classList.contains("active") === true;
+    if (currentRole || inSessionScreen || Boolean(currentRoomCode)) {
       clearStoredSession();
       closeSession();
       return;
