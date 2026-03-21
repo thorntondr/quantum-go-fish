@@ -126,3 +126,33 @@ test("renderCardHands highlights the selected ask target before an answer is pen
 
   assert.match(html, /<section class="hand hand--selected-target">\s*<div class="hand-label">D<\/div>/);
 });
+
+test("renderCardHands scales center symbol size based on band count", () => {
+  const singleBandState = createInitialState(config);
+  singleBandState.handSizes.A = 1;
+  singleBandState.max.A.S1 = 1;
+  singleBandState.max.A.S2 = 0;
+  singleBandState.max.A.S3 = 0;
+  singleBandState.max.A.S4 = 0;
+
+  const multiBandState = createInitialState(config);
+  multiBandState.handSizes.A = 1;
+  multiBandState.max.A.S1 = 1;
+  multiBandState.max.A.S2 = 1;
+  multiBandState.max.A.S3 = 1;
+  multiBandState.max.A.S4 = 1;
+
+  const singleBandHtml = renderCardHands(singleBandState, {
+    formatPlayer: (playerId) => playerId,
+    getSuitMeta: () => undefined,
+    localPlayerId: "A"
+  });
+  const multiBandHtml = renderCardHands(multiBandState, {
+    formatPlayer: (playerId) => playerId,
+    getSuitMeta: () => undefined,
+    localPlayerId: "A"
+  });
+
+  assert.match(singleBandHtml, /--band-symbol-size: 3.3rem/);
+  assert.match(multiBandHtml, /--band-symbol-size: 1.6rem/);
+});

@@ -464,7 +464,7 @@ pre {
 }
 
 .band-symbol {
-  font-size: 1.6rem;
+  font-size: var(--band-symbol-size, 1.6rem);
   line-height: 1;
   color: var(--band-ink, #1a2a24);
 }

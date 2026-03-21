@@ -176,6 +176,19 @@ function resolveBandInkColor(color: string): string {
   return luminance < 0.35 ? LIGHT_BAND_INK : DARK_BAND_INK;
 }
 
+function bandSymbolSize(bandCount: number): string {
+  if (bandCount <= 1) {
+    return "3.3rem";
+  }
+  if (bandCount === 2) {
+    return "2.5rem";
+  }
+  if (bandCount === 3) {
+    return "2rem";
+  }
+  return "1.6rem";
+}
+
 function renderBand(
   suit: SuitId,
   suits: SuitId[],
@@ -222,6 +235,7 @@ function renderFrontCard(card: CardModel, suits: SuitId[], getSuitMeta: (id: Sui
     `;
   }
   const bands = sortBandsForDisplay(card.bands, suits);
+  const bandCount = bands.length;
   const bandHtml = bands
     .filter((band) => band)
     .map((suit) => renderBand(suit, suits, getSuitMeta(suit), {
@@ -233,7 +247,7 @@ function renderFrontCard(card: CardModel, suits: SuitId[], getSuitMeta: (id: Sui
     .join("");
   return `
     <div class="card card--front">
-      <div class="card-bands">
+      <div class="card-bands" style="--band-symbol-size: ${bandSymbolSize(bandCount)};">
         ${bandHtml}
       </div>
     </div>
