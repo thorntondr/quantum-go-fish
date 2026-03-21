@@ -130,6 +130,7 @@ test("renderCardHands highlights the selected ask target before an answer is pen
 test("renderCardHands scales center symbol size based on band count", () => {
   const singleBandState = createInitialState(config);
   singleBandState.handSizes.A = 1;
+  singleBandState.min.A.S1 = 1;
   singleBandState.max.A.S1 = 1;
   singleBandState.max.A.S2 = 0;
   singleBandState.max.A.S3 = 0;
