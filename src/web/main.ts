@@ -573,6 +573,7 @@ function setScreen(target: "landing" | "waiting" | "game"): void {
   if (!screenLanding || !screenWaiting || !screenGame) {
     return;
   }
+  statusRoot.hidden = target !== "game";
   if (sessionActions) {
     sessionActions.hidden = target === "landing";
   }
