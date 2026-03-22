@@ -19,6 +19,7 @@ const statusRoot = requireEl("status");
 const headerSubtitle = getEl("headerSubtitle");
 const turnActionNotice = getEl("turnActionNotice");
 const pendingAskNotice = getEl("pendingAskNotice");
+const departureNotice = getEl("departureNotice");
 const pauseNotice = getEl("pauseNotice");
 const sessionErrorRoot = requireEl("sessionError");
 const moveErrorRoot = requireEl("moveError");
@@ -104,6 +105,14 @@ function setMoveError(message: string): void {
 function clearErrors(): void {
   setSessionError("");
   setMoveError("");
+}
+
+function setDepartureNotice(message: string): void {
+  if (!departureNotice) {
+    return;
+  }
+  departureNotice.textContent = message;
+  departureNotice.hidden = !message;
 }
 
 function updatePlayerLabels(connections: ConnectionState[]): void {
@@ -462,6 +471,8 @@ function refreshPauseNotice(current: GameState): void {
 }
 
 function renderRoster(connections: ConnectionState[]): void {
+  const previousStatuses = new Map(playerStatusById);
+  const previousLabels = new Map(playerLabelById);
   updatePlayerLabels(connections);
   playerStatusById = new Map();
   for (const connection of connections) {
@@ -482,6 +493,24 @@ function renderRoster(connections: ConnectionState[]): void {
       const label = player.playerId ? formatPlayer(player.playerId) : (player.label || player.peerId);
       item.textContent = `${label} (${player.status})`;
       waitingRoster.appendChild(item);
+    }
+  }
+  if (gameStarted) {
+    let nextNotice = "";
+    for (const connection of connections) {
+      if (!connection.playerId || connection.playerId === assignedPlayer) {
+        continue;
+      }
+      if (connection.status !== "inactive") {
+        continue;
+      }
+      const previousStatus = previousStatuses.get(connection.playerId);
+      if (previousStatus && previousStatus !== "inactive") {
+        nextNotice = `${previousLabels.get(connection.playerId) ?? connection.label ?? connection.playerId} left the game.`;
+      }
+    }
+    if (nextNotice) {
+      setDepartureNotice(nextNotice);
     }
   }
   persistSession();
@@ -534,6 +563,9 @@ function sessionHooks() {
     onGameStarted: (started: boolean) => {
       gameStarted = started;
       appendLog(`Game started=${started}`);
+      if (!started) {
+        setDepartureNotice("");
+      }
       if (started) {
         setScreen("game");
       } else {
@@ -568,6 +600,7 @@ function closeSession(): void {
     shareRoomBtn.disabled = true;
   }
   clearEventLog();
+  setDepartureNotice("");
   setScreen("landing");
 }
 

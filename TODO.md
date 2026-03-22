@@ -7,7 +7,7 @@
         - [ ] How is the transfer accomplished?  Is one of the draw pile's potential suits randomly selected and collapsed before transfer?  Is there some way to transfer the possibilities of a card instead?
 - [x] [UI] Cards only fit 6 or 7 suits, depending on hand display size.  Increase card height when 7 suits or more are in play.
 - [x] [Bug] [Multi] Cannot leave empty waiting room; error says there is no active game to leave
-- [ ] [UI] [Multi] When a non-host player leaves an active game, there should be some sort of notification in remaining active players' UI
+- [x] [UI] [Multi] When a non-host player leaves an active game, there should be some sort of notification in remaining active players' UI
 - [x] [UI] [Multi] Hide waiting room event log by default.
 - [x] [Multi] Event log should start empty in a new waiting room
 - [x] [UI] [Multi] Show room code during active game
