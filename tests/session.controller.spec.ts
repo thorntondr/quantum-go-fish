@@ -338,6 +338,38 @@ test("Peer session logs host connection transitions, hello, and join rejection",
   assert.deepEqual(errors, ["Room is full."]);
 });
 
+test("Peer session leaveGame still closes locally when host connection is already closed", () => {
+  class ClosedHostTransport extends MockPeerTransport {
+    closed = false;
+
+    override send(_to: PeerId, _message: SessionMessage): void {
+      throw new Error("Host connection is not open.");
+    }
+
+    override close(): void {
+      this.closed = true;
+    }
+  }
+
+  const transport = new ClosedHostTransport();
+  const startedStates: boolean[] = [];
+  const peer = createPeerSession(
+    {
+      onGameStarted: (started) => startedStates.push(started)
+    },
+    {
+      transport,
+      clientId: "peer-client",
+      displayName: "Remote"
+    }
+  );
+
+  peer.leaveGame();
+
+  assert.equal(transport.closed, true);
+  assert.equal(startedStates.at(-1), false);
+});
+
 test("Host session supports starting with 13 connected players", () => {
   const transport = new MockHostTransport();
   const errors: string[] = [];

@@ -970,7 +970,11 @@ export function createPeerSession(
       );
     },
     leaveGame(): void {
-      transport.send("host", buildMessage(clientId, "leave_game", {}));
+      try {
+        transport.send("host", buildMessage(clientId, "leave_game", {}));
+      } catch {
+        // Best effort: if the host channel is already gone, still let the local peer exit cleanly.
+      }
       started = false;
       hooks.onGameStarted(false);
       transport.close();
