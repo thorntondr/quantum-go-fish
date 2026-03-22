@@ -199,6 +199,17 @@ function bandSymbolSize(bandCount: number): string {
   return "1.6rem";
 }
 
+function frontCardBandStyle(bandCount: number): string {
+  const symbolSize = bandSymbolSize(bandCount);
+  if (bandCount >= 6) {
+    return `--band-symbol-size: ${symbolSize}; --band-name-size: 0.48rem; --band-center-gap: 1px;`;
+  }
+  if (bandCount === 5) {
+    return `--band-symbol-size: ${symbolSize}; --band-name-size: 0.58rem; --band-center-gap: 2px;`;
+  }
+  return `--band-symbol-size: ${symbolSize};`;
+}
+
 function renderBand(
   suit: SuitId,
   suits: SuitId[],
@@ -257,7 +268,7 @@ function renderFrontCard(card: CardModel, suits: SuitId[], getSuitMeta: (id: Sui
     .join("");
   return `
     <div class="card card--front">
-      <div class="card-bands" style="--band-symbol-size: ${bandSymbolSize(bandCount)};">
+      <div class="card-bands" style="${frontCardBandStyle(bandCount)}">
         ${bandHtml}
       </div>
     </div>

@@ -20,6 +20,14 @@ const sevenSuitConfig: SetupConfig = {
   startingPlayer: "A"
 };
 
+const sixSuitConfig: SetupConfig = {
+  players: ["A", "B", "C", "D", "E", "F"],
+  suits: ["S1", "S2", "S3", "S4", "S5", "S6"],
+  suitTotals: { S1: 4, S2: 4, S3: 4, S4: 4, S5: 4, S6: 4 },
+  handSizes: { A: 4, B: 4, C: 4, D: 4, E: 4, F: 4 },
+  startingPlayer: "A"
+};
+
 function render(localPlayerId?: string): string {
   return renderCardHands(createInitialState(config), {
     formatPlayer: (playerId) => playerId,
@@ -174,4 +182,15 @@ test("renderCardHands increases card height when seven suits are in play", () =>
   });
 
   assert.match(html, /--card-height: calc\(var\(--card-width\) \* 16 \/ 9\);/);
+});
+
+test("renderCardHands shrinks front-card content styling for six-band cards", () => {
+  const html = renderCardHands(createInitialState(sixSuitConfig), {
+    formatPlayer: (playerId) => playerId,
+    getSuitMeta: () => undefined,
+    localPlayerId: "A"
+  });
+
+  assert.match(html, /--band-name-size: 0.48rem;/);
+  assert.match(html, /--band-center-gap: 1px;/);
 });

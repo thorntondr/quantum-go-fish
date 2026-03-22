@@ -472,7 +472,7 @@ pre {
 
 .band-corner {
   position: absolute;
-  font-size: 0.85rem;
+  font-size: var(--band-corner-size, 0.85rem);
   color: var(--band-ink, #26332e);
   opacity: 0.9;
 }
@@ -492,7 +492,7 @@ pre {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: var(--band-center-gap, 4px);
   text-align: center;
 }
 
@@ -503,7 +503,7 @@ pre {
 }
 
 .band-name {
-  font-size: 0.7rem;
+  font-size: var(--band-name-size, 0.7rem);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--band-ink, #23312c);

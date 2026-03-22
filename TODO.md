@@ -15,7 +15,7 @@
 - [ ] [Workflow] build Warning: "Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/configure-pages@v5, actions/setup-node@v4, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
 - [ ] [Workflow] deploy Warning: "Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/deploy-pages@v4."
 - [ ] [Workflow] Skip build and redeploy if the only changes are to files at the project root
-- [ ] [UI] [BUG] Bands on front card in other player's hands overflow for six suits or more.
+- [x] [UI] [BUG] Bands on front card in other player's hands overflow for six suits or more.
 - [x] [UI] Remove/hide "Turn: ..." message on screens other than active game
 - [x] [UI] Remove/hide "Host or join a room across multiple devices" message on active game screen
 - [x] [UI] Clear error message(s) upon successful Host, Join, Start Game, or Leave Game
