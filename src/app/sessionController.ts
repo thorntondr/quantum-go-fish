@@ -184,6 +184,7 @@ export function createHostSession(
       suitTotals,
       handSizes,
       startingPlayer,
+      initialSuitMax: template.initialSuitMax,
       version: template.version
     };
   }

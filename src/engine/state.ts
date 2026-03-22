@@ -43,10 +43,17 @@ export function validateSetup(config: SetupConfig): void {
   if (!config.players.includes(config.startingPlayer)) {
     throw new Error(`Starting player ${config.startingPlayer} is not in players.`);
   }
+
+  if (config.initialSuitMax !== undefined) {
+    if (!Number.isInteger(config.initialSuitMax) || config.initialSuitMax < 1 || config.initialSuitMax > 4) {
+      throw new Error("Initial suit max must be an integer from 1 to 4.");
+    }
+  }
 }
 
 export function createInitialState(config: SetupConfig): GameState {
   validateSetup(config);
+  const initialSuitMax = config.initialSuitMax ?? 4;
 
   return {
     players: [...config.players],
@@ -54,7 +61,7 @@ export function createInitialState(config: SetupConfig): GameState {
     suitTotals: { ...config.suitTotals },
     handSizes: { ...config.handSizes },
     min: buildMatrix(config.players, config.suits, () => 0),
-    max: buildMatrix(config.players, config.suits, (suit) => config.suitTotals[suit]),
+    max: buildMatrix(config.players, config.suits, (suit) => Math.min(config.suitTotals[suit], initialSuitMax)),
     inactivePlayers: [],
     turnState: {
       phase: "Idle",

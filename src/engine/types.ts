@@ -59,6 +59,7 @@ export interface SetupConfig {
   suitTotals: Record<SuitId, number>;
   handSizes: Record<PlayerId, number>;
   startingPlayer: PlayerId;
+  initialSuitMax?: number;
   version?: number;
 }
 
