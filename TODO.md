@@ -5,6 +5,7 @@
     - [ ] All or nothing: When answering "Yes," you must transfer all of your cards of that suit.  This means that in addition to saying "Yes," you must also pick a number in the range [min, max].
     - [ ] Draw Pile: Add one extra suit to the deck and a draw pile of four cards.  When an oppoent says "No," you have to go fish.  The draw pile can be tracked in the game state and display as if it were an extra player, but it does not take turns.
         - [ ] How is the transfer accomplished?  Is one of the draw pile's potential suits randomly selected and collapsed before transfer?  Is there some way to transfer the possibilities of a card instead?
+    - [ ] Dummy player: Similar to a draw pile, but simpler as the cards in the dummy player's hand are inaccessible.  A dummy player is just a player that is inactive to begin with.
 - [x] [UI] Cards only fit 6 or 7 suits, depending on hand display size.  Increase card height when 7 suits or more are in play.
 - [x] [Bug] [Multi] Cannot leave empty waiting room; error says there is no active game to leave
 - [x] [UI] [Multi] When a non-host player leaves an active game, there should be some sort of notification in remaining active players' UI
