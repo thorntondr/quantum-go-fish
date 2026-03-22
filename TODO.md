@@ -20,4 +20,10 @@
 - [x] [UI] Remove/hide "Host or join a room across multiple devices" message on active game screen
 - [x] [UI] Clear error message(s) upon successful Host, Join, Start Game, or Leave Game
 - [x] [UI] Hide mode switch button except on their respective landing pages
-- [ ] [Multi] [Bug] When host player leaves, other players are stranded as Leave Game button no longer functions.
+- [ ] [Multi] [Bug] When host player leaves, other players are stranded as Leave Game button no longer functions.  Probably related to the following error:
+"""
+Uncaught Error: Host connection is not open.
+    at PeerPeerJsTransport.send (peerJsTransport.js:119:19)
+    at Object.leaveGame (sessionController.js:776:23)
+    at HTMLButtonElement.<anonymous> (main.js:752:25)
+"""
