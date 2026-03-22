@@ -27,6 +27,7 @@ const askBtn = requireEl("askBtn") as HTMLButtonElement;
 const yesBtn = requireEl("yesBtn") as HTMLButtonElement;
 const noBtn = requireEl("noBtn") as HTMLButtonElement;
 const infoBtn = getEl("infoBtn") as HTMLButtonElement | null;
+const modeSwitchLink = getEl("modeSwitchLink");
 
 const suitOverlay = getEl("suitOverlay");
 const suitOverlayLabel = getEl("suitOverlayLabel");
@@ -271,6 +272,9 @@ function refreshControls(current: GameState): void {
 }
 
 function render(): void {
+  if (modeSwitchLink) {
+    modeSwitchLink.hidden = Boolean(state);
+  }
   if (!state) {
     if (turnActionNotice) {
       turnActionNotice.textContent = "";

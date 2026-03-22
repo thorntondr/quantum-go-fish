@@ -26,6 +26,7 @@ const legalMoves = getEl("legalMoves");
 const eventLogRoot = requireEl("eventLog");
 const playAgainBtn = getEl("playAgainBtn") as HTMLButtonElement | null;
 const sessionActions = getEl("sessionActions");
+const modeSwitchLink = getEl("modeSwitchLink");
 
 const friendlyNameInput = getEl("friendlyName") as HTMLInputElement | null;
 const hostBtn = getEl("hostBtn") as HTMLButtonElement | null;
@@ -577,6 +578,9 @@ function setScreen(target: "landing" | "waiting" | "game"): void {
   statusRoot.hidden = target !== "game";
   if (headerSubtitle) {
     headerSubtitle.hidden = target === "game";
+  }
+  if (modeSwitchLink) {
+    modeSwitchLink.hidden = target !== "landing";
   }
   if (sessionActions) {
     sessionActions.hidden = target === "landing";
