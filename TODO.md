@@ -7,18 +7,6 @@ Optional rules variants to try (can be implemented one at a time):
     - [ ] Draw Pile: Add one extra suit to the deck and a draw pile of four cards.  When an oppoent says "No," you have to go fish.  The draw pile can be tracked in the game state and display as if it were an extra player, but it does not take turns.
         - [ ] How is the transfer accomplished?  Is one of the draw pile's potential suits randomly selected and collapsed before transfer?  Is there some way to transfer the possibilities of a card instead?
     - [ ] Dummy player: Similar to a draw pile, but simpler as the cards in the dummy player's hand are inaccessible.  A dummy player is just a player that is inactive to begin with.
-- [x] [UI] Cards only fit 6 or 7 suits, depending on hand display size.  Increase card height when 7 suits or more are in play.
-- [x] [Bug] [Multi] Cannot leave empty waiting room; error says there is no active game to leave
-- [x] [UI] [Multi] When a non-host player leaves an active game, there should be some sort of notification in remaining active players' UI
-- [x] [UI] [Multi] Hide waiting room event log by default.
-- [x] [Multi] Event log should start empty in a new waiting room
-- [x] [UI] [Multi] Show room code during active game
-- [x] Question: What are the pros/cons of splitting multi-device experience into multiple pages (landing, waiting, playing)
 - [ ] [Workflow] build Warning: "Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/configure-pages@v5, actions/setup-node@v4, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
 - [ ] [Workflow] deploy Warning: "Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/deploy-pages@v4."
-- [x] [Workflow] Skip build and redeploy if the only changes are to files at the project root
-- [x] [UI] [BUG] Bands on front card in other player's hands overflow for six suits or more.
-- [x] [UI] Remove/hide "Turn: ..." message on screens other than active game
-- [x] [UI] Remove/hide "Host or join a room across multiple devices" message on active game screen
-- [x] [UI] Clear error message(s) upon successful Host, Join, Start Game, or Leave Game
-- [x] [UI] Hide mode switch button except on their respective landing pages
+
