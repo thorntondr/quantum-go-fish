@@ -38,7 +38,6 @@ const gameRoomCode = getEl("gameRoomCode");
 const waitingRoster = getEl("waitingRoster");
 const waitingStartGameBtn = getEl("waitingStartGameBtn") as HTMLButtonElement | null;
 const maxThreeToggle = getEl("maxThreeToggle") as HTMLInputElement | null;
-const maxThreeHelp = getEl("maxThreeHelp");
 const shareRoomBtn = getEl("shareRoomBtn") as HTMLButtonElement | null;
 const shareRoomLink = getEl("shareRoomLink") as HTMLInputElement | null;
 const screenLanding = getEl("screenLanding");
@@ -223,20 +222,6 @@ function submitSuitMeta(suitId: string, meta: SuitMeta): void {
 function defaultSuitColor(suitId: string): string {
   const index = Math.max(0, state.suits.indexOf(suitId));
   return OKABE_ITO[index % OKABE_ITO.length];
-}
-
-function waitingPlayerCount(): number {
-  let count = 0;
-  for (const status of playerStatusById.values()) {
-    if (status === "open") {
-      count += 1;
-    }
-  }
-  return count;
-}
-
-function maxThreeAllowed(): boolean {
-  return waitingPlayerCount() >= 3;
 }
 
 function loadStoredSession(): Record<string, unknown> | undefined {
@@ -471,14 +456,10 @@ function refreshControls(current: GameState): void {
     waitingStartGameBtn.disabled = !hostSession;
   }
   if (maxThreeToggle) {
-    const allowed = maxThreeAllowed();
     syncingMaxThreeToggle = true;
     maxThreeToggle.checked = maxThreeEnabled;
-    maxThreeToggle.disabled = !hostSession || !allowed;
+    maxThreeToggle.disabled = !hostSession;
     syncingMaxThreeToggle = false;
-  }
-  if (maxThreeHelp) {
-    maxThreeHelp.hidden = maxThreeAllowed();
   }
 }
 
@@ -517,12 +498,6 @@ function renderRoster(connections: ConnectionState[]): void {
     if (connection.playerId) {
       playerStatusById.set(connection.playerId, connection.status);
     }
-  }
-  const allowed = maxThreeAllowed();
-  if (!gameStarted && hostSession && maxThreeEnabled && !allowed) {
-    maxThreeEnabled = false;
-    appendLog("Max 3 was turned off because it requires at least 3 connected players.");
-    hostSession.updateSetup(buildConfig(MAX_PLAYERS));
   }
   if (waitingRoster) {
     const openPlayers = connections.filter((c) => c.playerId);
