@@ -29,6 +29,7 @@ export interface HostSession {
   submitMove: (move: Move) => void;
   startGame: () => void;
   restartGame: () => void;
+  updateSetup: (setup: SetupConfig) => void;
   requestSync: (peerId?: PeerId) => void;
   setSuitMeta: (suitId: string, meta: SuitMeta) => void;
   close: () => void;
@@ -662,6 +663,10 @@ export function createHostSession(
     },
     restartGame(): void {
       startGameInternal("restart_game");
+    },
+    updateSetup(setup: SetupConfig): void {
+      config.setup = setup;
+      refreshSnapshotForRoster("rules_changed");
     },
     requestSync(peerId?: PeerId): void {
       if (peerId) {

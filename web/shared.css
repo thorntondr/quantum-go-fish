@@ -105,6 +105,18 @@ label {
   min-width: 140px;
 }
 
+.checkbox-row {
+  flex-direction: row;
+  align-items: flex-start;
+  min-width: 0;
+  gap: 10px;
+  color: var(--ink);
+}
+
+.checkbox-row input[type="checkbox"] {
+  margin-top: 3px;
+}
+
 input,
 select,
 button,

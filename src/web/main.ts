@@ -37,6 +37,7 @@ const waitingRoomCode = getEl("waitingRoomCode");
 const gameRoomCode = getEl("gameRoomCode");
 const waitingRoster = getEl("waitingRoster");
 const waitingStartGameBtn = getEl("waitingStartGameBtn") as HTMLButtonElement | null;
+const maxThreeToggle = getEl("maxThreeToggle") as HTMLInputElement | null;
 const shareRoomBtn = getEl("shareRoomBtn") as HTMLButtonElement | null;
 const shareRoomLink = getEl("shareRoomLink") as HTMLInputElement | null;
 const screenLanding = getEl("screenLanding");
@@ -78,6 +79,7 @@ let suitMetaById = new Map<string, SuitMeta>();
 let playerStatusById = new Map<string, string>();
 let currentRoomCode = "";
 let selectedAskTarget: string | undefined;
+let maxThreeEnabled = false;
 
 const STORAGE_KEY = "qgf-session-v1";
 const ENABLE_SESSION_RESTORE = false;
@@ -310,8 +312,16 @@ function buildConfig(playerCount: number): SetupConfig {
     suits,
     suitTotals,
     handSizes,
-    startingPlayer: players[0]
+    startingPlayer: players[0],
+    initialSuitMax: maxThreeEnabled ? 3 : 4
   };
+}
+
+function applyWaitingRoomRules(): void {
+  if (!hostSession) {
+    return;
+  }
+  hostSession.updateSetup(buildConfig(MAX_PLAYERS));
 }
 
 function legalAsks(current: GameState, asker: string): Move[] {
@@ -441,6 +451,10 @@ function refreshControls(current: GameState): void {
 
   if (waitingStartGameBtn) {
     waitingStartGameBtn.disabled = !hostSession;
+  }
+  if (maxThreeToggle) {
+    maxThreeToggle.checked = maxThreeEnabled;
+    maxThreeToggle.disabled = !hostSession;
   }
 }
 
@@ -589,6 +603,7 @@ function closeSession(): void {
   currentRole = undefined;
   assignedPlayer = undefined;
   gameStarted = false;
+  maxThreeEnabled = false;
   if (waitingRoster) {
     waitingRoster.innerHTML = "<li class=\"roster-item\">No connected players yet.</li>";
   }
@@ -598,6 +613,9 @@ function closeSession(): void {
   }
   if (shareRoomBtn) {
     shareRoomBtn.disabled = true;
+  }
+  if (maxThreeToggle) {
+    maxThreeToggle.checked = false;
   }
   clearEventLog();
   setDepartureNotice("");
@@ -813,6 +831,18 @@ if (waitingStartGameBtn) {
     }
     clearErrors();
     hostSession.startGame();
+  });
+}
+
+if (maxThreeToggle) {
+  maxThreeToggle.addEventListener("change", () => {
+    if (!hostSession) {
+      maxThreeToggle.checked = maxThreeEnabled;
+      return;
+    }
+    maxThreeEnabled = maxThreeToggle.checked;
+    applyWaitingRoomRules();
+    render();
   });
 }
 
