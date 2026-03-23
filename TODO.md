@@ -7,6 +7,6 @@ Optional rules variants to try (can be implemented one at a time):
     - [ ] Draw Pile: Add one extra suit to the deck and a draw pile of four cards.  When an oppoent says "No," you have to go fish.  The draw pile can be tracked in the game state and display as if it were an extra player, but it does not take turns.
         - [ ] How is the transfer accomplished?  Is one of the draw pile's potential suits randomly selected and collapsed before transfer?  Is there some way to transfer the possibilities of a card instead?
     - [ ] Dummy player: Similar to a draw pile, but simpler as the cards in the dummy player's hand are inaccessible.  A dummy player is just a player that is inactive to begin with.
-- [x] [Workflow] build Warning: "Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/configure-pages@v5, actions/setup-node@v4, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
-~~- [ ] [Workflow] deploy Warning: "Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/deploy-pages@v4."~~ Open issue: https://github.com/actions/deploy-pages/issues/410
+- [ ] [Workflow] build Warning: "Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/configure-pages@v5, actions/setup-node@v4, actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+- [ ] [Workflow] deploy Warning: "Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/deploy-pages@v4."
 
