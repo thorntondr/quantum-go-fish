@@ -104,23 +104,29 @@ function buildCardsForPlayer(state: GameState, playerId: PlayerId): CardModel[] 
     return best;
   };
 
-  for (const card of uncertain) {
-    const chosen = new Set<SuitId>();
-    for (let i = 0; i < minPerCard; i += 1) {
-      const suit = pickSuit(chosen);
+  const chosen = Array.from(uncertain, () => new Set<SuitId>());
+  for (let i = 0; i < minPerCard; i += 1) {
+    for (let j = 0; j < uncertain.length; j += 1) {
+      const suit = pickSuit(chosen[j]);
       if (!suit) {
-        break;
+        continue;
       }
-      chosen.add(suit);
+      chosen[j].add(suit);
       remaining[suit] -= 1;
     }
-    if (chosen.size < minPerCard) {
-      chosen.add(UNKNOWN_SUIT_ID);
+  }
+  for (let j = 0; j < uncertain.length; j += 1) {
+    if (chosen[j].size < minPerCard) {
+      chosen[j].add(UNKNOWN_SUIT_ID);
     }
-    if (chosen.size < minPerCard) {
-      throw new Error("Unresolved card has too few suits assigned to it");
+    if (chosen[j].size < minPerCard) {
+      console.warn("Unresolved card has too few suits assigned to it", {
+        playerId,
+        cardIndex: fixedIndex + j,
+        state
+      });
     }
-    card.bands = [...chosen];
+    uncertain[j].bands = [...chosen[j]];
   }
 
   while (true) {
