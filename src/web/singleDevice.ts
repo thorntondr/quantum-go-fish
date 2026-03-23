@@ -20,6 +20,7 @@ const pendingAskNotice = getEl("pendingAskNotice");
 const errorRoot = requireEl("error");
 const stateRoot = requireEl("state");
 const rosterInput = requireEl("rosterInput") as HTMLTextAreaElement;
+const maxThreeToggle = getEl("maxThreeToggle") as HTMLInputElement | null;
 const startBtn = requireEl("startBtn") as HTMLButtonElement;
 const askTarget = requireEl("askTarget") as HTMLSelectElement;
 const askSuit = requireEl("askSuit") as HTMLSelectElement;
@@ -134,6 +135,12 @@ function randomStartingPlayer(players: string[]): string {
   return players[index] ?? players[0];
 }
 
+function refreshSetupOptions(): void {
+  if (maxThreeToggle) {
+    maxThreeToggle.disabled = false;
+  }
+}
+
 function buildConfig(players: string[]): SetupConfig {
   const suits = Array.from({ length: players.length }, (_, i) => `S${i + 1}`);
   const suitTotals: Record<string, number> = {};
@@ -151,7 +158,8 @@ function buildConfig(players: string[]): SetupConfig {
     suits,
     suitTotals,
     handSizes,
-    startingPlayer: randomStartingPlayer(players)
+    startingPlayer: randomStartingPlayer(players),
+    initialSuitMax: maxThreeToggle?.checked ? 3 : 4
   };
 }
 
@@ -322,6 +330,10 @@ startBtn.addEventListener("click", () => {
   render();
 });
 
+rosterInput.addEventListener("input", () => {
+  refreshSetupOptions();
+});
+
 askBtn.addEventListener("click", () => {
   if (!state) {
     setError("Start a game first.");
@@ -360,4 +372,5 @@ noBtn.addEventListener("click", () => {
   submitMove({ kind: "AnswerNo", target: state.turnState.pendingAsk.target, suit: state.turnState.pendingAsk.suit });
 });
 
+refreshSetupOptions();
 render();
