@@ -67,7 +67,8 @@ function defaultHooks(): SessionUiHooks {
     onSnapshot: () => {},
     onAssignedPlayer: () => {},
     onGameStarted: () => {},
-    onSuitMetaChanged: () => {}
+    onSuitMetaChanged: () => {},
+    onSetupChanged: () => {}
   };
 }
 
@@ -114,9 +115,7 @@ export function createHostSession(
   const hostPlayerId = config.setup.players[0];
   const baseState =
     deps.initialState ??
-    createInitialState(
-      buildSetupForPlayers(config.setup, [hostPlayerId])
-    );
+    createInitialState(config.setup);
   let sessionSeq = deps.sessionSeq ?? 0;
   let snapshot = snapshotFromState(baseState, sessionSeq);
   let started = deps.started ?? false;
@@ -158,11 +157,6 @@ export function createHostSession(
     return config.setup.players.filter((playerId) => active.has(playerId) && !inactive.has(playerId));
   }
 
-  function buildSetupForPlayers(template: SetupConfig, players: string[]): SetupConfig {
-    const startingPlayer = players[0];
-    return buildSetupWithStartingPlayer(template, players, startingPlayer);
-  }
-
   function buildSetupWithStartingPlayer(
     template: SetupConfig,
     players: string[],
@@ -195,10 +189,7 @@ export function createHostSession(
     return players[index] ?? players[0];
   }
 
-  function refreshSnapshotForRoster(reason: string, force = false): void {
-    if (started && !force) {
-      return;
-    }
+  function refreshSnapshotForRoster(reason: string): void {
     const players = activeAssignedPlayers();
     if (players.length === 0) {
       return;
@@ -206,27 +197,25 @@ export function createHostSession(
     sessionSeq = 0;
     const startingPlayer =
       reason === "start_game" || reason === "restart_game" ? randomStartingPlayer(players) : players[0];
-    snapshot = snapshotFromState(
-      createInitialState(buildSetupWithStartingPlayer(config.setup, players, startingPlayer)),
-      sessionSeq
-    );
+    const setup = buildSetupWithStartingPlayer(config.setup, players, startingPlayer);
+    snapshot = snapshotFromState(createInitialState(setup), sessionSeq);
     hooks.onSnapshot(snapshot);
-    hooks.onLog(`Updated pregame setup for ${players.length} player(s) (${reason}).`);
+    hooks.onLog(`Updated game setup for ${players.length} player(s) (${reason}).`);
   }
 
   function updateSetupInternal(nextSetup: SetupConfig, reason: string): void {
     config.setup = nextSetup;
+    hooks.onSetupChanged(config.setup);
     if (started) {
       hooks.onLog(`Stored setup update for next game (${reason}).`);
       return;
     }
-    refreshSnapshotForRoster(reason);
     transport.broadcast(
-      buildMessage(clientId, "sync_response", {
-        snapshot,
-        reason
+      buildMessage(clientId, "setup_update", {
+        setup: config.setup
       })
     );
+    hooks.onLog(`Updated waiting-room setup (${reason}).`);
   }
 
   function startGameInternal(reason: "start_game" | "restart_game", nextSetup?: SetupConfig): void {
@@ -257,7 +246,7 @@ export function createHostSession(
       emitSuitMeta();
       updateConnections();
     }
-    refreshSnapshotForRoster(reason, true);
+    refreshSnapshotForRoster(reason);
     started = true;
     hooks.onGameStarted(true);
     hooks.onSnapshot(snapshot);
@@ -465,9 +454,6 @@ export function createHostSession(
       }
       updateConnections();
       broadcastRosterLeft(peerId);
-      if (!started) {
-        refreshSnapshotForRoster("peer_left");
-      }
       return;
     }
     updateConnections();
@@ -521,7 +507,6 @@ export function createHostSession(
         return;
       }
       updateConnections();
-      refreshSnapshotForRoster("peer_joined");
       hooks.onLog(`Sending welcome to ${updated.label} (${fromPeerId}) as player ${assignedPlayerId}.`);
 
       transport.send(
@@ -530,18 +515,10 @@ export function createHostSession(
           assignedPlayerId,
           roster: rosterFromMap(connections),
           hostClientId: clientId,
-          suitMeta: { ...suitMeta }
+          suitMeta: { ...suitMeta },
+          setup: config.setup
         })
       );
-      if (!started) {
-        transport.send(
-          fromPeerId,
-          buildMessage(clientId, "sync_response", {
-            snapshot,
-            reason: "pregame_sync"
-          })
-        );
-      }
       if (started) {
         hooks.onLog(`Sending start_game snapshot to rejoined peer ${updated.label} (${fromPeerId}).`);
         transport.send(
@@ -671,9 +648,9 @@ export function createHostSession(
   });
 
   hooks.onAssignedPlayer(hostPlayerId);
-  hooks.onSnapshot(snapshot);
   updateConnections();
   emitSuitMeta();
+  hooks.onSetupChanged(config.setup);
   hooks.onGameStarted(started);
 
   return {
@@ -851,6 +828,7 @@ export function createPeerSession(
       }
       Object.assign(suitMeta, message.suitMeta ?? {});
       emitSuitMeta();
+      hooks.onSetupChanged(message.setup);
       connections.clear();
       for (const row of message.roster) {
         connections.set(row.peerId, row);
@@ -914,6 +892,11 @@ export function createPeerSession(
 
     if (message.kind === "sync_response") {
       applySnapshot(message.snapshot, `sync_response:${message.reason}`);
+      return;
+    }
+
+    if (message.kind === "setup_update") {
+      hooks.onSetupChanged(message.setup);
       return;
     }
 

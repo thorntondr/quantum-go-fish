@@ -43,6 +43,7 @@ interface BaseSessionMessage {
     | "state_commit"
     | "sync_request"
     | "sync_response"
+    | "setup_update"
     | "peer_joined"
     | "peer_left"
     | "suit_meta"
@@ -63,6 +64,7 @@ export type SessionMessage =
       roster: ConnectionState[];
       hostClientId: ClientId;
       suitMeta: Record<SuitId, SuitMeta>;
+      setup: SetupConfig;
     })
   | (BaseSessionMessage & {
       kind: "start_game";
@@ -110,6 +112,10 @@ export type SessionMessage =
       reason: string;
     })
   | (BaseSessionMessage & {
+      kind: "setup_update";
+      setup: SetupConfig;
+    })
+  | (BaseSessionMessage & {
       kind: "peer_joined";
       peer: ConnectionState;
       roster: ConnectionState[];
@@ -137,4 +143,5 @@ export interface SessionUiHooks {
   onAssignedPlayer: (playerId: string | undefined) => void;
   onGameStarted: (started: boolean) => void;
   onSuitMetaChanged: (suitMeta: Record<SuitId, SuitMeta>) => void;
+  onSetupChanged: (setup: SetupConfig) => void;
 }

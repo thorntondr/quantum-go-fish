@@ -1,4 +1,13 @@
+import { propagate } from "./propagate.js";
 import type { BoundsMatrix, GameState, SetupConfig } from "./types.js";
+
+interface CreateInitialStateOptions {
+  propagate?: boolean;
+}
+
+interface CreateInitialStateTestOnlyOptions {
+  propagate: boolean;
+}
 
 function buildMatrix(players: string[], suits: string[], fill: (suit: string) => number): BoundsMatrix {
   const matrix: BoundsMatrix = {};
@@ -51,11 +60,10 @@ export function validateSetup(config: SetupConfig): void {
   }
 }
 
-export function createInitialState(config: SetupConfig): GameState {
+function createInitialStateInternal(config: SetupConfig, options: CreateInitialStateOptions = {}): GameState {
   validateSetup(config);
   const initialSuitMax = config.initialSuitMax ?? 4;
-
-  return {
+  const state: GameState = {
     players: [...config.players],
     suits: [...config.suits],
     suitTotals: { ...config.suitTotals },
@@ -69,6 +77,22 @@ export function createInitialState(config: SetupConfig): GameState {
     },
     version: config.version ?? 1
   };
+
+  if (options.propagate ?? true) {
+    return propagate(state);
+  }
+  return state;
+}
+
+export function createInitialState(config: SetupConfig): GameState {
+  return createInitialStateInternal(config, { propagate: true });
+}
+
+export function createInitialStateTestOnly(
+  config: SetupConfig,
+  options: CreateInitialStateTestOnlyOptions
+): GameState {
+  return createInitialStateInternal(config, options);
 }
 
 export function cloneState(state: GameState): GameState {

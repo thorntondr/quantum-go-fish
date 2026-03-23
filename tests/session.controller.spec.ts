@@ -283,7 +283,8 @@ test("Peer session requests sync on commit sequence gap", () => {
       assignedPlayerId: "B",
       roster: [],
       hostClientId: "host-client",
-      suitMeta: {}
+      suitMeta: {},
+      setup: setupConfig2()
     })
   );
   transport.emitFromHost(
@@ -445,15 +446,13 @@ test("Host session broadcasts waiting-room setup changes before the game starts"
     initialSuitMax: 3
   });
 
-  assert.equal(host.getSnapshot().state.max.A.S1, 3);
   const outbound = transport.messagesFor("peer-1");
-  const update = [...outbound].reverse().find((message) => message.kind === "sync_response");
-  assert.ok(update && update.kind === "sync_response");
-  assert.equal(update.reason, "setup_updated");
-  assert.equal(update.snapshot.state.max.A.S1, 3);
+  const update = [...outbound].reverse().find((message) => message.kind === "setup_update");
+  assert.ok(update && update.kind === "setup_update");
+  assert.equal(update.setup.initialSuitMax, 3);
 });
 
-test("Host session sends the current pregame snapshot to a newly joined peer", () => {
+test("Host session sends the current waiting-room setup to a newly joined peer", () => {
   const transport = new MockHostTransport();
   createHostSession(
     {
@@ -475,11 +474,8 @@ test("Host session sends the current pregame snapshot to a newly joined peer", (
 
   const outbound = transport.messagesFor("peer-1");
   const welcome = outbound.find((message) => message.kind === "welcome");
-  const sync = outbound.find((message) => message.kind === "sync_response");
   assert.ok(welcome && welcome.kind === "welcome");
-  assert.ok(sync && sync.kind === "sync_response");
-  assert.equal(sync.reason, "pregame_sync");
-  assert.equal(sync.snapshot.state.max.A.S1, 3);
+  assert.equal(welcome.setup.initialSuitMax, 3);
 });
 
 test("Host session broadcasts suit_meta when first named by a peer", () => {
@@ -535,7 +531,8 @@ test("Peer session applies suit meta from welcome and suit_meta messages", () =>
       assignedPlayerId: "B",
       roster: [],
       hostClientId: "host-client",
-      suitMeta: { S: { name: "Stars" } }
+      suitMeta: { S: { name: "Stars" } },
+      setup: setupConfig2()
     })
   );
 

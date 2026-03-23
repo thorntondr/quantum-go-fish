@@ -86,15 +86,6 @@ const STORAGE_KEY = "qgf-session-v1";
 const ENABLE_SESSION_RESTORE = false;
 const OKABE_ITO = ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"];
 
-function isMaxThreeConfig(current: GameState): boolean {
-  if (current.players.length === 0 || current.suits.length === 0) {
-    return false;
-  }
-  return current.players.every((playerId) =>
-    current.suits.every((suitId) => (current.max[playerId]?.[suitId] ?? 4) <= 3)
-  );
-}
-
 function appendLog(message: string): void {
   const line = `[${new Date().toLocaleTimeString()}] ${message}`;
   const next = eventLogRoot.textContent ? `${eventLogRoot.textContent}\n${line}` : line;
@@ -570,9 +561,6 @@ function sessionHooks() {
     onConnectionsChanged: renderRoster,
     onSnapshot: (snapshot: { state: GameState }) => {
       state = snapshot.state;
-      if (!gameStarted) {
-        maxThreeEnabled = isMaxThreeConfig(snapshot.state);
-      }
       render();
       persistSession();
     },
@@ -584,6 +572,11 @@ function sessionHooks() {
     },
     onSuitMetaChanged: (suitMeta: Record<string, SuitMeta>) => {
       updateSuitLabels(suitMeta);
+      render();
+      persistSession();
+    },
+    onSetupChanged: (setup: SetupConfig) => {
+      maxThreeEnabled = setup.initialSuitMax === 3;
       render();
       persistSession();
     },
