@@ -114,8 +114,11 @@ function buildCardsForPlayer(state: GameState, playerId: PlayerId): CardModel[] 
       chosen.add(suit);
       remaining[suit] -= 1;
     }
-    while (chosen.size < minPerCard) {
+    if (chosen.size < minPerCard) {
       chosen.add(UNKNOWN_SUIT_ID);
+    }
+    if (chosen.size < minPerCard) {
+      throw new Error("Unresolved card has too few suits assigned to it");
     }
     card.bands = [...chosen];
   }
