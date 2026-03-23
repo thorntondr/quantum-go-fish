@@ -65,6 +65,7 @@ const suitCancelBtn = getEl("suitCancelBtn") as HTMLButtonElement | null;
 const emojiSuggestions = getEl("emojiSuggestions");
 
 const MAX_PLAYERS = 13;
+let maxThreeEnabled = false;
 let state = createInitialState(buildConfig(1));
 let assignedPlayer: string | undefined;
 let gameStarted = false;
@@ -79,7 +80,6 @@ let suitMetaById = new Map<string, SuitMeta>();
 let playerStatusById = new Map<string, string>();
 let currentRoomCode = "";
 let selectedAskTarget: string | undefined;
-let maxThreeEnabled = false;
 
 const STORAGE_KEY = "qgf-session-v1";
 const ENABLE_SESSION_RESTORE = false;
