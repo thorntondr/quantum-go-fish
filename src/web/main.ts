@@ -80,10 +80,20 @@ let suitMetaById = new Map<string, SuitMeta>();
 let playerStatusById = new Map<string, string>();
 let currentRoomCode = "";
 let selectedAskTarget: string | undefined;
+let syncingMaxThreeToggle = false;
 
 const STORAGE_KEY = "qgf-session-v1";
 const ENABLE_SESSION_RESTORE = false;
 const OKABE_ITO = ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"];
+
+function isMaxThreeConfig(current: GameState): boolean {
+  if (current.players.length === 0 || current.suits.length === 0) {
+    return false;
+  }
+  return current.players.every((playerId) =>
+    current.suits.every((suitId) => (current.max[playerId]?.[suitId] ?? 4) <= 3)
+  );
+}
 
 function appendLog(message: string): void {
   const line = `[${new Date().toLocaleTimeString()}] ${message}`;
@@ -446,8 +456,10 @@ function refreshControls(current: GameState): void {
     waitingStartGameBtn.disabled = !hostSession;
   }
   if (maxThreeToggle) {
+    syncingMaxThreeToggle = true;
     maxThreeToggle.checked = maxThreeEnabled;
     maxThreeToggle.disabled = !hostSession;
+    syncingMaxThreeToggle = false;
   }
 }
 
@@ -526,13 +538,18 @@ function renderRoster(connections: ConnectionState[]): void {
 
 function render(): void {
   refreshControls(state);
-  renderState({ stateRoot, statusRoot }, state, {
-    formatPlayer,
-    formatSuit,
-    getSuitMeta,
-    localPlayerId: assignedPlayer,
-    selectedTargetPlayerId: selectedAskTarget
-  });
+  if (gameStarted) {
+    renderState({ stateRoot, statusRoot }, state, {
+      formatPlayer,
+      formatSuit,
+      getSuitMeta,
+      localPlayerId: assignedPlayer,
+      selectedTargetPlayerId: selectedAskTarget
+    });
+  } else {
+    stateRoot.innerHTML = "";
+    statusRoot.textContent = "";
+  }
   refreshTurnActionNotice(state);
   refreshPendingAskNotice(state);
   renderLegalMoves(state);
@@ -553,6 +570,9 @@ function sessionHooks() {
     onConnectionsChanged: renderRoster,
     onSnapshot: (snapshot: { state: GameState }) => {
       state = snapshot.state;
+      if (!gameStarted) {
+        maxThreeEnabled = isMaxThreeConfig(snapshot.state);
+      }
       render();
       persistSession();
     },
@@ -829,11 +849,18 @@ if (waitingStartGameBtn) {
 
 if (maxThreeToggle) {
   maxThreeToggle.addEventListener("change", () => {
+    if (syncingMaxThreeToggle) {
+      return;
+    }
     if (!hostSession) {
       maxThreeToggle.checked = maxThreeEnabled;
       return;
     }
+    if (maxThreeEnabled === maxThreeToggle.checked) {
+      return;
+    }
     maxThreeEnabled = maxThreeToggle.checked;
+    hostSession.updateSetup(buildConfig(MAX_PLAYERS));
     render();
   });
 }

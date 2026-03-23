@@ -29,6 +29,7 @@ export interface HostSession {
   submitMove: (move: Move) => void;
   startGame: (setup?: SetupConfig) => void;
   restartGame: (setup?: SetupConfig) => void;
+  updateSetup: (setup: SetupConfig) => void;
   requestSync: (peerId?: PeerId) => void;
   setSuitMeta: (suitId: string, meta: SuitMeta) => void;
   close: () => void;
@@ -211,6 +212,21 @@ export function createHostSession(
     );
     hooks.onSnapshot(snapshot);
     hooks.onLog(`Updated pregame setup for ${players.length} player(s) (${reason}).`);
+  }
+
+  function updateSetupInternal(nextSetup: SetupConfig, reason: string): void {
+    config.setup = nextSetup;
+    if (started) {
+      hooks.onLog(`Stored setup update for next game (${reason}).`);
+      return;
+    }
+    refreshSnapshotForRoster(reason);
+    transport.broadcast(
+      buildMessage(clientId, "sync_response", {
+        snapshot,
+        reason
+      })
+    );
   }
 
   function startGameInternal(reason: "start_game" | "restart_game", nextSetup?: SetupConfig): void {
@@ -517,6 +533,15 @@ export function createHostSession(
           suitMeta: { ...suitMeta }
         })
       );
+      if (!started) {
+        transport.send(
+          fromPeerId,
+          buildMessage(clientId, "sync_response", {
+            snapshot,
+            reason: "pregame_sync"
+          })
+        );
+      }
       if (started) {
         hooks.onLog(`Sending start_game snapshot to rejoined peer ${updated.label} (${fromPeerId}).`);
         transport.send(
@@ -665,6 +690,9 @@ export function createHostSession(
     },
     restartGame(setup?: SetupConfig): void {
       startGameInternal("restart_game", setup);
+    },
+    updateSetup(setup: SetupConfig): void {
+      updateSetupInternal(setup, "setup_updated");
     },
     requestSync(peerId?: PeerId): void {
       if (peerId) {

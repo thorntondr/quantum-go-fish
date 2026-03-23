@@ -425,6 +425,63 @@ test("Host session can apply waiting-room setup rules when the game starts", () 
   assert.equal(host.getSnapshot().state.max.A.S1, 3);
 });
 
+test("Host session broadcasts waiting-room setup changes before the game starts", () => {
+  const transport = new MockHostTransport();
+  const host = createHostSession(
+    { setup: setupConfigN(3) },
+    {},
+    {
+      transport,
+      clientId: "host-client",
+      displayName: "Host"
+    }
+  );
+
+  transport.emitPeerState("peer-1", "open");
+  transport.emitFrom("peer-1", buildMessage("peer-client-1", "hello", { displayName: "Peer 1" }));
+
+  host.updateSetup({
+    ...setupConfigN(3),
+    initialSuitMax: 3
+  });
+
+  assert.equal(host.getSnapshot().state.max.A.S1, 3);
+  const outbound = transport.messagesFor("peer-1");
+  const update = [...outbound].reverse().find((message) => message.kind === "sync_response");
+  assert.ok(update && update.kind === "sync_response");
+  assert.equal(update.reason, "setup_updated");
+  assert.equal(update.snapshot.state.max.A.S1, 3);
+});
+
+test("Host session sends the current pregame snapshot to a newly joined peer", () => {
+  const transport = new MockHostTransport();
+  createHostSession(
+    {
+      setup: {
+        ...setupConfigN(3),
+        initialSuitMax: 3
+      }
+    },
+    {},
+    {
+      transport,
+      clientId: "host-client",
+      displayName: "Host"
+    }
+  );
+
+  transport.emitPeerState("peer-1", "open");
+  transport.emitFrom("peer-1", buildMessage("peer-client-1", "hello", { displayName: "Peer 1" }));
+
+  const outbound = transport.messagesFor("peer-1");
+  const welcome = outbound.find((message) => message.kind === "welcome");
+  const sync = outbound.find((message) => message.kind === "sync_response");
+  assert.ok(welcome && welcome.kind === "welcome");
+  assert.ok(sync && sync.kind === "sync_response");
+  assert.equal(sync.reason, "pregame_sync");
+  assert.equal(sync.snapshot.state.max.A.S1, 3);
+});
+
 test("Host session broadcasts suit_meta when first named by a peer", () => {
   const transport = new MockHostTransport();
   createHostSession(
