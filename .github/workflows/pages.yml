@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -39,13 +39,14 @@ jobs:
       - name: Build site
         run: npm run build:site
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
+      - name: Package Pages artifact
+        run: tar -czf github-pages.tar.gz -C site .
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
-          path: site
+          name: github-pages
+          path: github-pages.tar.gz
 
   deploy:
     environment:
