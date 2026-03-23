@@ -27,9 +27,8 @@ interface SessionDeps {
 
 export interface HostSession {
   submitMove: (move: Move) => void;
-  startGame: () => void;
-  restartGame: () => void;
-  updateSetup: (setup: SetupConfig) => void;
+  startGame: (setup?: SetupConfig) => void;
+  restartGame: (setup?: SetupConfig) => void;
   requestSync: (peerId?: PeerId) => void;
   setSuitMeta: (suitId: string, meta: SuitMeta) => void;
   close: () => void;
@@ -214,7 +213,10 @@ export function createHostSession(
     hooks.onLog(`Updated pregame setup for ${players.length} player(s) (${reason}).`);
   }
 
-  function startGameInternal(reason: "start_game" | "restart_game"): void {
+  function startGameInternal(reason: "start_game" | "restart_game", nextSetup?: SetupConfig): void {
+    if (nextSetup) {
+      config.setup = nextSetup;
+    }
     const openAssigned = rosterFromMap(connections).filter(
       (c) => c.peerId !== "self" && c.status === "open" && !!c.playerId
     );
@@ -658,15 +660,11 @@ export function createHostSession(
       }
       commitMove(move);
     },
-    startGame(): void {
-      startGameInternal("start_game");
+    startGame(setup?: SetupConfig): void {
+      startGameInternal("start_game", setup);
     },
-    restartGame(): void {
-      startGameInternal("restart_game");
-    },
-    updateSetup(setup: SetupConfig): void {
-      config.setup = setup;
-      refreshSnapshotForRoster("rules_changed");
+    restartGame(setup?: SetupConfig): void {
+      startGameInternal("restart_game", setup);
     },
     requestSync(peerId?: PeerId): void {
       if (peerId) {

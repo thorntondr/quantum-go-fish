@@ -402,14 +402,11 @@ test("Host session supports starting with 13 connected players", () => {
   assert.equal(host.getSnapshot().state.players.length, 13);
 });
 
-test("Host session can update waiting-room setup rules before the game starts", () => {
+test("Host session can apply waiting-room setup rules when the game starts", () => {
   const transport = new MockHostTransport();
-  const snapshots: number[] = [];
   const host = createHostSession(
     { setup: setupConfigN(3) },
-    {
-      onSnapshot: (snapshot) => snapshots.push(snapshot.state.max.A.S1)
-    },
+    {},
     {
       transport,
       clientId: "host-client",
@@ -417,13 +414,15 @@ test("Host session can update waiting-room setup rules before the game starts", 
     }
   );
 
-  host.updateSetup({
+  transport.emitPeerState("peer-1", "open");
+  transport.emitFrom("peer-1", buildMessage("peer-client-1", "hello", { displayName: "Peer 1" }));
+
+  host.startGame({
     ...setupConfigN(3),
     initialSuitMax: 3
   });
 
   assert.equal(host.getSnapshot().state.max.A.S1, 3);
-  assert.equal(snapshots.at(-1), 3);
 });
 
 test("Host session broadcasts suit_meta when first named by a peer", () => {

@@ -317,13 +317,6 @@ function buildConfig(playerCount: number): SetupConfig {
   };
 }
 
-function applyWaitingRoomRules(): void {
-  if (!hostSession) {
-    return;
-  }
-  hostSession.updateSetup(buildConfig(MAX_PLAYERS));
-}
-
 function legalAsks(current: GameState, asker: string): Move[] {
   const moves: Move[] = [];
   if (current.inactivePlayers.includes(asker)) {
@@ -830,7 +823,7 @@ if (waitingStartGameBtn) {
       return;
     }
     clearErrors();
-    hostSession.startGame();
+    hostSession.startGame(buildConfig(MAX_PLAYERS));
   });
 }
 
@@ -841,7 +834,6 @@ if (maxThreeToggle) {
       return;
     }
     maxThreeEnabled = maxThreeToggle.checked;
-    applyWaitingRoomRules();
     render();
   });
 }
@@ -852,7 +844,7 @@ if (playAgainBtn) {
       setSessionError("Only the host can restart the game.");
       return;
     }
-    hostSession.restartGame();
+    hostSession.restartGame(buildConfig(MAX_PLAYERS));
   });
 }
 
