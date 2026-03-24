@@ -720,6 +720,7 @@ async function initSession(options: {
 
   if (options.role === "host") {
     hostTransport = new HostPeerJsTransport(localPeerId);
+    hostTransport.onDebugLog?.(appendLog);
     hostTransport.onReady((id) => {
       setWaitingRoomCode(id);
       appendLog(`Host code ready: ${id}`);
@@ -737,6 +738,7 @@ async function initSession(options: {
     appendLog("Host session initialized (PeerJS Cloud).");
   } else {
     peerTransport = new PeerPeerJsTransport(hostCode, localPeerId);
+    peerTransport.onDebugLog?.(appendLog);
     peerTransport.onReady((id) => {
       appendLog(`Peer ID ready: ${id}`);
     });

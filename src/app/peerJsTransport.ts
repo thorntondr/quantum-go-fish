@@ -22,6 +22,27 @@ interface PeerLike {
 
 type PeerCtorLike = new (id?: string) => PeerLike;
 
+function describePeerJsError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    const type = typeof record.type === "string" ? record.type : undefined;
+    const message = typeof record.message === "string" ? record.message : undefined;
+    if (type && message) {
+      return `${type}: ${message}`;
+    }
+    if (message) {
+      return message;
+    }
+    if (type) {
+      return type;
+    }
+  }
+  return String(error);
+}
+
 function peerCtor(): PeerCtorLike {
   const ctor = (globalThis as { Peer?: PeerCtorLike }).Peer;
   if (!ctor) {
@@ -36,32 +57,60 @@ export class HostPeerJsTransport implements SessionTransport {
   private messageHandler: (from: PeerId, message: SessionMessage) => void = () => {};
   private peerStateHandler: (peerId: PeerId, status: PeerStatus) => void = () => {};
   private readyHandler: (peerId: PeerId) => void = () => {};
+  private debugLogHandler: (line: string) => void = () => {};
+
+  private debug(line: string): void {
+    this.debugLogHandler(`[PeerJS host] ${line}`);
+  }
 
   constructor(hostPeerId?: string) {
     const Peer = peerCtor();
     this.peer = new Peer(hostPeerId);
     this.peer.on("open", (id: string) => {
+      this.debug(`local peer opened as ${id}.`);
       this.readyHandler(id);
       this.peerStateHandler("self", "open");
     });
     this.peer.on("connection", (conn: DataConnectionLike) => {
       const peerId = conn.peer;
+      this.debug(`incoming connection from ${peerId}.`);
       this.peers.set(peerId, conn);
       this.peerStateHandler(peerId, "connecting");
-      conn.on("open", () => this.peerStateHandler(peerId, "open"));
+      conn.on("open", () => {
+        this.debug(`connection ${peerId} opened.`);
+        this.peerStateHandler(peerId, "open");
+      });
       conn.on("close", () => {
+        this.debug(`connection ${peerId} closed.`);
         this.peers.delete(peerId);
         this.peerStateHandler(peerId, "closed");
       });
-      conn.on("error", () => this.peerStateHandler(peerId, "error"));
+      conn.on("error", (error: unknown) => {
+        this.debug(`connection ${peerId} error: ${describePeerJsError(error)}.`);
+        this.peerStateHandler(peerId, "error");
+      });
       conn.on("data", (raw: unknown) => {
-        const parsed = parseMessage(String(raw));
-        this.messageHandler(peerId, parsed);
+        try {
+          const parsed = parseMessage(String(raw));
+          this.messageHandler(peerId, parsed);
+        } catch (error) {
+          this.debug(`failed to parse message from ${peerId}: ${describePeerJsError(error)}.`);
+          throw error;
+        }
       });
     });
-    this.peer.on("error", () => this.peerStateHandler("self", "error"));
-    this.peer.on("disconnected", () => this.peerStateHandler("self", "closed"));
-    this.peer.on("close", () => this.peerStateHandler("self", "closed"));
+    this.peer.on("error", (error: unknown) => {
+      this.debug(`peer error: ${describePeerJsError(error)}.`);
+      this.peerStateHandler("self", "error");
+    });
+    this.peer.on("disconnected", () => {
+      this.debug("peer disconnected from signaling server.");
+      this.peerStateHandler("self", "closed");
+    });
+    this.peer.on("close", () => {
+      this.debug("peer closed.");
+      this.peerStateHandler("self", "closed");
+    });
   }
 
   onReady(handler: (peerId: PeerId) => void): void {
@@ -98,6 +147,10 @@ export class HostPeerJsTransport implements SessionTransport {
     this.peerStateHandler = handler;
   }
 
+  onDebugLog(handler: (line: string) => void): void {
+    this.debugLogHandler = handler;
+  }
+
   close(): void {
     for (const conn of this.peers.values()) {
       conn.close();
@@ -116,30 +169,60 @@ export class PeerPeerJsTransport implements SessionTransport {
   private messageHandler: (from: PeerId, message: SessionMessage) => void = () => {};
   private peerStateHandler: (peerId: PeerId, status: PeerStatus) => void = () => {};
   private readyHandler: (peerId: PeerId) => void = () => {};
+  private debugLogHandler: (line: string) => void = () => {};
+
+  private debug(line: string): void {
+    this.debugLogHandler(`[PeerJS peer] ${line}`);
+  }
 
   constructor(hostPeerId: PeerId, localPeerId?: string) {
     this.hostRemotePeerId = hostPeerId;
     const Peer = peerCtor();
     this.peer = new Peer(localPeerId);
     this.peer.on("open", (id: string) => {
+      this.debug(`local peer opened as ${id}; connecting to host ${this.hostRemotePeerId}.`);
       this.readyHandler(id);
       this.openHostConnection();
     });
-    this.peer.on("error", () => this.peerStateHandler(this.hostLogicalPeerId, "error"));
-    this.peer.on("disconnected", () => this.peerStateHandler(this.hostLogicalPeerId, "closed"));
-    this.peer.on("close", () => this.peerStateHandler(this.hostLogicalPeerId, "closed"));
+    this.peer.on("error", (error: unknown) => {
+      this.debug(`peer error: ${describePeerJsError(error)}.`);
+      this.peerStateHandler(this.hostLogicalPeerId, "error");
+    });
+    this.peer.on("disconnected", () => {
+      this.debug("peer disconnected from signaling server.");
+      this.peerStateHandler(this.hostLogicalPeerId, "closed");
+    });
+    this.peer.on("close", () => {
+      this.debug("peer closed.");
+      this.peerStateHandler(this.hostLogicalPeerId, "closed");
+    });
   }
 
   private openHostConnection(): void {
+    this.debug(`creating data connection to host ${this.hostRemotePeerId}.`);
     this.peerStateHandler(this.hostLogicalPeerId, "connecting");
     const conn = this.peer.connect(this.hostRemotePeerId, { reliable: true });
     this.conn = conn;
-    conn.on("open", () => this.peerStateHandler(this.hostLogicalPeerId, "open"));
-    conn.on("close", () => this.peerStateHandler(this.hostLogicalPeerId, "closed"));
-    conn.on("error", () => this.peerStateHandler(this.hostLogicalPeerId, "error"));
+    conn.on("open", () => {
+      this.debug(`connection to host ${this.hostRemotePeerId} opened.`);
+      this.peerStateHandler(this.hostLogicalPeerId, "open");
+    });
+    conn.on("close", () => {
+      this.debug(`connection to host ${this.hostRemotePeerId} closed.`);
+      this.peerStateHandler(this.hostLogicalPeerId, "closed");
+    });
+    conn.on("error", (error: unknown) => {
+      this.debug(`connection to host ${this.hostRemotePeerId} error: ${describePeerJsError(error)}.`);
+      this.peerStateHandler(this.hostLogicalPeerId, "error");
+    });
     conn.on("data", (raw: unknown) => {
-      const parsed = parseMessage(String(raw));
-      this.messageHandler(this.hostLogicalPeerId, parsed);
+      try {
+        const parsed = parseMessage(String(raw));
+        this.messageHandler(this.hostLogicalPeerId, parsed);
+      } catch (error) {
+        this.debug(`failed to parse message from host: ${describePeerJsError(error)}.`);
+        throw error;
+      }
     });
   }
 
@@ -171,6 +254,10 @@ export class PeerPeerJsTransport implements SessionTransport {
 
   onPeerState(handler: (peerId: PeerId, status: PeerStatus) => void): void {
     this.peerStateHandler = handler;
+  }
+
+  onDebugLog(handler: (line: string) => void): void {
+    this.debugLogHandler = handler;
   }
 
   close(): void {
