@@ -1,6 +1,6 @@
 - [ ] Revisit disconnection design
     - [ ] BUG: When we tried to host from the family PC or from Peter's chromebook, the other of the two was not able to join.  It appeared to put them in another room (see above).
-- [ ] Add UI to intial screen for single device and multi-device waiting room screen to control optional rules.
+- [x] Add UI to intial screen for single device and multi-device waiting room screen to control optional rules.
 Optional rules variants to try (can be implemented one at a time):
     - [x] Max 3: All player's per-suit maximums start at 3 instead of 4.  This means that you will need to acquire at least one card from an opponent to get four of a kind.
     - [ ] All or nothing: When answering "Yes," you must transfer all of your cards of that suit.  This means that in addition to saying "Yes," you must also pick a number in the range [min, max].
