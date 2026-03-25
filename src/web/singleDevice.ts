@@ -10,6 +10,7 @@ import {
   requireEl
 } from "../ui/browserUi.js";
 import { renderState } from "../ui/interaction.js";
+import { formatSuitLabel } from "../ui/suitPresentation.js";
 
 type SuitMeta = { name?: string; symbol?: string; color?: string };
 
@@ -69,7 +70,7 @@ function getSuitMeta(suitId: string): SuitMeta | undefined {
 }
 
 function formatSuit(suitId: string): string {
-  return suitMetaById.get(suitId)?.name ?? suitId;
+  return formatSuitLabel(suitId, state?.suits ?? [], suitMetaById.get(suitId));
 }
 
 function formatPlayer(playerId: string): string {

@@ -13,6 +13,7 @@ import {
   requireEl
 } from "../ui/browserUi.js";
 import { renderState } from "../ui/interaction.js";
+import { formatSuitLabel } from "../ui/suitPresentation.js";
 
 const stateRoot = requireEl("state");
 const statusRoot = requireEl("status");
@@ -161,7 +162,7 @@ function updateSuitLabels(suitMeta: Record<string, SuitMeta>): void {
 }
 
 function formatSuit(suitId: string): string {
-  return suitMetaById.get(suitId)?.name ?? suitId;
+  return formatSuitLabel(suitId, state.suits, suitMetaById.get(suitId));
 }
 
 function refreshPendingAskNotice(current: GameState): void {

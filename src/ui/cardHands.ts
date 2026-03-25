@@ -1,4 +1,5 @@
 import type { GameState, PlayerId, SuitId } from "../engine/types.js";
+import { getDefaultSuitSymbol } from "./suitPresentation.js";
 
 export interface SuitMeta {
   name?: string;
@@ -160,12 +161,14 @@ function buildCardsForPlayer(state: GameState, playerId: PlayerId): CardModel[] 
 }
 
 function defaultSymbolForSuit(suit: SuitId, suits: SuitId[]): string {
-  const index = Math.max(0, suits.indexOf(suit));
-  return DEFAULT_SUIT_SYMBOLS[index % DEFAULT_SUIT_SYMBOLS.length];
+  return getDefaultSuitSymbol(suit, suits);
 }
 
-function resolveSuitName(suitMeta: SuitMeta | undefined): string {
-  return suitMeta?.name?.trim() || UNKNOWN_LABEL;
+function resolveSuitName(suit: SuitId, suitMeta: SuitMeta | undefined): string {
+  if (suit === UNKNOWN_SUIT_ID) {
+    return UNKNOWN_LABEL;
+  }
+  return suitMeta?.name?.trim() || suit;
 }
 
 function resolveSuitSymbol(suit: SuitId, suits: SuitId[], suitMeta: SuitMeta | undefined): string {
@@ -231,7 +234,7 @@ function renderBand(
   }
 ): string {
   const symbol = resolveSuitSymbol(suit, suits, suitMeta);
-  const label = resolveSuitName(suitMeta);
+  const label = resolveSuitName(suit, suitMeta);
   const color = resolveSuitColor(suitMeta);
   const ink = resolveBandInkColor(color);
   const cornerHtml = `

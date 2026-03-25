@@ -81,6 +81,16 @@ test("renderCardHands uses light ink for dark suit backgrounds", () => {
   assert.match(html, /--band-color: #123456; --band-ink: #dee2e0/);
 });
 
+test("renderCardHands shows default suit ids on card faces when no suit name is set", () => {
+  const html = renderCardHands(createInitialState(config), {
+    formatPlayer: (playerId) => playerId,
+    getSuitMeta: () => undefined,
+    localPlayerId: "A"
+  });
+
+  assert.match(html, /band-name">S1</);
+});
+
 test("renderCardHands keeps dark ink for light suit backgrounds", () => {
   const html = renderCardHands(createInitialState(config), {
     formatPlayer: (playerId) => playerId,
