@@ -355,7 +355,10 @@ function renderCardStack(
 export function renderCardHands(state: GameState, options: RenderCardsOptions): string {
   const { formatPlayer, getSuitMeta, localPlayerId, askingPlayerId, answeringPlayerId, selectedTargetPlayerId, winnerPlayerId } = options;
   const displayedPlayers = rotatePlayersFromLocal(state.players, localPlayerId);
-  const otherPlayers = localPlayerId ? displayedPlayers.filter((player) => player !== localPlayerId) : displayedPlayers;
+  const drawPilePlayerId = state.drawPile?.playerId;
+  const otherPlayers = (localPlayerId ? displayedPlayers.filter((player) => player !== localPlayerId) : displayedPlayers).filter(
+    (player) => player !== drawPilePlayerId
+  );
   const handStyle = handSizingStyle(state.suits.length);
   const handStateClasses = (playerId: PlayerId): string =>
     [
@@ -376,6 +379,18 @@ export function renderCardHands(state: GameState, options: RenderCardsOptions): 
           <section class="hand hand--self ${handStateClasses(localPlayerId)}" ${handStyle ? `style="${handStyle}"` : ""}>
             <div class="hand-label">You — ${formatPlayer(localPlayerId)}</div>
             ${renderCardStack(buildCardsForPlayer(state, localPlayerId), state.suits, getSuitMeta)}
+          </section>
+        </div>
+      `
+          : ""
+      }
+      ${
+        drawPilePlayerId
+          ? `
+        <div class="hands-self">
+          <section class="hand hand--draw-pile ${handStateClasses(drawPilePlayerId)}" ${handStyle ? `style="${handStyle}"` : ""}>
+            <div class="hand-label">${formatPlayer(drawPilePlayerId)}</div>
+            ${renderCardStack(buildCardsForPlayer(state, drawPilePlayerId), state.suits, getSuitMeta)}
           </section>
         </div>
       `

@@ -194,3 +194,25 @@ test("renderCardHands shrinks front-card content styling for six-band cards", ()
   assert.match(html, /--band-name-size: 0.48rem;/);
   assert.match(html, /--band-center-gap: 1px;/);
 });
+
+test("renderCardHands renders the draw pile in its own dedicated section before other opponents", () => {
+  const state = createInitialState({
+    players: ["A", "B", "C"],
+    suits: ["S1", "S2", "S3"],
+    suitTotals: { S1: 4, S2: 4, S3: 4 },
+    handSizes: { A: 4, B: 4, C: 4 },
+    startingPlayer: "A",
+    drawPile: true
+  });
+
+  const html = renderCardHands(state, {
+    formatPlayer: (playerId) => (playerId === state.drawPile?.playerId ? "Draw Pile" : playerId),
+    getSuitMeta: () => undefined,
+    localPlayerId: "A",
+    askingPlayerId: "A"
+  });
+
+  assert.match(html, /<div class="hands-self">\s*<section class="hand hand--draw-pile/);
+  assert.ok(labelIndex(html, "Draw Pile") < labelIndex(html, "B"));
+  assert.ok(labelIndex(html, "B") < labelIndex(html, "C"));
+});
