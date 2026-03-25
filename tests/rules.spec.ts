@@ -42,11 +42,12 @@ test("AnswerYes under all-or-nothing requires an exact count within the known ra
   const state = makeState();
   state.allOrNothing = true;
   state.turnState.pendingAsk = { asker: "A", target: "B", suit: "S" };
-  state.min.B.S = 2;
+  state.min.B.S = 0;
   state.max.B.S = 3;
 
   assert.equal(isLegalMove(state, { kind: "AnswerYes", target: "B", suit: "S" }).ok, false);
-  assert.equal(isLegalMove(state, { kind: "AnswerYes", target: "B", suit: "S", count: 1 }).ok, false);
+  assert.equal(isLegalMove(state, { kind: "AnswerYes", target: "B", suit: "S", count: 0 }).ok, false);
+  assert.equal(isLegalMove(state, { kind: "AnswerYes", target: "B", suit: "S", count: 1 }).ok, true);
   assert.equal(isLegalMove(state, { kind: "AnswerYes", target: "B", suit: "S", count: 2 }).ok, true);
   assert.equal(isLegalMove(state, { kind: "AnswerYes", target: "B", suit: "S", count: 3 }).ok, true);
   assert.equal(isLegalMove(state, { kind: "AnswerYes", target: "B", suit: "S", count: 4 }).ok, false);

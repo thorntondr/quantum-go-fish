@@ -76,6 +76,9 @@ export function isLegalMove(state: GameState, move: Move): LegalResult {
     if (typeof count !== "number" || !Number.isInteger(count)) {
       return { ok: false, reason: "AnswerYes illegal: all-or-nothing requires an exact transfer count." };
     }
+    if (count <= 0) {
+      return { ok: false, reason: "AnswerYes illegal: all-or-nothing transfer count must be at least 1." };
+    }
     if (count < state.min[move.target][move.suit] || count > state.max[move.target][move.suit]) {
       return {
         ok: false,
