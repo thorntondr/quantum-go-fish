@@ -68,6 +68,20 @@ test("Setup supports enabling all-or-nothing answers", () => {
   assert.equal(state.allOrNothing, true);
 });
 
+test("Setup supports enabling a draw pile with an extra suit and inactive pseudo-player", () => {
+  const config = validConfig();
+  config.drawPile = true;
+
+  const state = createInitialState(config);
+
+  assert.ok(state.drawPile);
+  assert.equal(state.players.length, 4);
+  assert.equal(state.suits.length, 4);
+  assert.equal(state.handSizes[state.drawPile.playerId], 4);
+  assert.equal(state.suitTotals[state.drawPile.suitId], 4);
+  assert.deepEqual(state.inactivePlayers, [state.drawPile.playerId]);
+});
+
 test("createInitialState propagates the initial bounds by default", () => {
   const config = forcedConfig();
 

@@ -20,6 +20,16 @@ function buildMatrix(players: string[], suits: string[], fill: (suit: string) =>
   return matrix;
 }
 
+function uniqueReservedId(existing: string[], base: string): string {
+  let candidate = base;
+  let index = 1;
+  while (existing.includes(candidate)) {
+    candidate = `${base}_${index}`;
+    index += 1;
+  }
+  return candidate;
+}
+
 export function validateSetup(config: SetupConfig): void {
   if (config.players.length === 0) {
     throw new Error("Setup requires at least one player.");
@@ -62,26 +72,52 @@ export function validateSetup(config: SetupConfig): void {
   if (config.allOrNothing !== undefined && typeof config.allOrNothing !== "boolean") {
     throw new Error("All-or-nothing rule flag must be a boolean when provided.");
   }
+
+  if (config.drawPile !== undefined && typeof config.drawPile !== "boolean") {
+    throw new Error("Draw-pile rule flag must be a boolean when provided.");
+  }
 }
 
 function createInitialStateInternal(config: SetupConfig, options: CreateInitialStateOptions = {}): GameState {
   validateSetup(config);
   const initialSuitMax = config.initialSuitMax ?? 4;
+  const drawPile = config.drawPile
+    ? {
+        playerId: uniqueReservedId(config.players, "__DRAW_PILE__"),
+        suitId: uniqueReservedId(config.suits, "__DRAW_SUIT__")
+      }
+    : undefined;
+  const players = drawPile ? [...config.players, drawPile.playerId] : [...config.players];
+  const suits = drawPile ? [...config.suits, drawPile.suitId] : [...config.suits];
+  const suitTotals = drawPile ? { ...config.suitTotals, [drawPile.suitId]: 4 } : { ...config.suitTotals };
+  const handSizes = drawPile ? { ...config.handSizes, [drawPile.playerId]: 4 } : { ...config.handSizes };
   const state: GameState = {
-    players: [...config.players],
-    suits: [...config.suits],
-    suitTotals: { ...config.suitTotals },
-    handSizes: { ...config.handSizes },
-    min: buildMatrix(config.players, config.suits, () => 0),
-    max: buildMatrix(config.players, config.suits, (suit) => Math.min(config.suitTotals[suit], initialSuitMax)),
+    players,
+    suits,
+    suitTotals,
+    handSizes,
+    min: buildMatrix(players, suits, () => 0),
+    max: buildMatrix(players, suits, (suit) => {
+      if (drawPile && suit in suitTotals) {
+        return Math.min(suitTotals[suit], initialSuitMax);
+      }
+      return Math.min(suitTotals[suit], initialSuitMax);
+    }),
     allOrNothing: config.allOrNothing ?? false,
-    inactivePlayers: [],
+    drawPile,
+    inactivePlayers: drawPile ? [drawPile.playerId] : [],
     turnState: {
       phase: "Idle",
       currentPlayer: config.startingPlayer
     },
     version: config.version ?? 1
   };
+
+  if (drawPile) {
+    for (const suit of suits) {
+      state.max[drawPile.playerId][suit] = suitTotals[suit];
+    }
+  }
 
   if (options.propagate ?? true) {
     return propagate(state);
@@ -109,6 +145,7 @@ export function cloneState(state: GameState): GameState {
     min: deepCloneMatrix(state.min, state.players, state.suits),
     max: deepCloneMatrix(state.max, state.players, state.suits),
     allOrNothing: state.allOrNothing,
+    drawPile: state.drawPile ? { ...state.drawPile } : undefined,
     inactivePlayers: [...state.inactivePlayers],
     turnState: {
       phase: state.turnState.phase,

@@ -207,3 +207,63 @@ test("All-or-nothing AnswerYes collapses the responder range to the declared cou
   assert.equal(next.max.B.S, 0);
   assert.equal(next.min.A.S, 3);
 });
+
+test("AnswerNo with draw pile makes the asker go fish from the pile", () => {
+  const config: SetupConfig = {
+    players: ["A", "B", "C"],
+    suits: ["S", "H", "D"],
+    suitTotals: { S: 4, H: 4, D: 4 },
+    handSizes: { A: 4, B: 4, C: 4 },
+    startingPlayer: "A",
+    drawPile: true
+  };
+
+  let state = createInitialState(config);
+  const drawPile = state.drawPile;
+  assert.ok(drawPile);
+
+  state.min[drawPile.playerId].S = 1;
+  state.max[drawPile.playerId].S = 2;
+  state.max[drawPile.playerId].H = 1;
+  state.max.A.S = 1;
+  state.max.A.H = 2;
+
+  state = applyMove(state, { kind: "Ask", asker: "A", target: "B", suit: "D" });
+  const next = applyMove(state, { kind: "AnswerNo", target: "B", suit: "D" });
+
+  assert.equal(next.handSizes.A, 5);
+  assert.equal(next.handSizes[drawPile.playerId], 3);
+  assert.equal(next.max.B.D, 0);
+  assert.equal(next.min[drawPile.playerId].S, 0);
+  assert.equal(next.max.A.S, 2);
+  assert.equal(next.max.A.H, 3);
+  assert.equal(next.turnState.currentPlayer, "B");
+});
+
+test("AnswerNo with an empty draw pile does not change hand sizes", () => {
+  const config: SetupConfig = {
+    players: ["A", "B", "C"],
+    suits: ["S", "H", "D"],
+    suitTotals: { S: 4, H: 4, D: 4 },
+    handSizes: { A: 4, B: 4, C: 4 },
+    startingPlayer: "A",
+    drawPile: true
+  };
+
+  let state = createInitialState(config);
+  const drawPile = state.drawPile;
+  assert.ok(drawPile);
+  state.handSizes.A += 4;
+  state.handSizes[drawPile.playerId] = 0;
+  for (const suit of state.suits) {
+    state.min[drawPile.playerId][suit] = 0;
+    state.max[drawPile.playerId][suit] = 0;
+  }
+
+  state = applyMove(state, { kind: "Ask", asker: "A", target: "B", suit: "S" });
+  const next = applyMove(state, { kind: "AnswerNo", target: "B", suit: "S" });
+
+  assert.equal(next.handSizes.A, 8);
+  assert.equal(next.handSizes[drawPile.playerId], 0);
+  assert.equal(next.max.B.S, 0);
+});

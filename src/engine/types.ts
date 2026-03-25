@@ -34,6 +34,11 @@ export interface TurnState {
   winReason?: WinReason;
 }
 
+export interface DrawPileState {
+  playerId: PlayerId;
+  suitId: SuitId;
+}
+
 export interface GameState {
   players: PlayerId[];
   suits: SuitId[];
@@ -42,6 +47,7 @@ export interface GameState {
   min: BoundsMatrix;
   max: BoundsMatrix;
   allOrNothing: boolean;
+  drawPile?: DrawPileState;
   inactivePlayers: PlayerId[];
   turnState: TurnState;
   version: number;
@@ -62,6 +68,7 @@ export interface SetupConfig {
   startingPlayer: PlayerId;
   initialSuitMax?: number;
   allOrNothing?: boolean;
+  drawPile?: boolean;
   version?: number;
 }
 

@@ -427,6 +427,31 @@ test("Host session can apply waiting-room setup rules when the game starts", () 
   assert.equal(host.getSnapshot().state.max.A.S1, 3);
 });
 
+test("Host session can apply the draw-pile setup rule when the game starts", () => {
+  const transport = new MockHostTransport();
+  const host = createHostSession(
+    { setup: setupConfigN(3) },
+    {},
+    {
+      transport,
+      clientId: "host-client",
+      displayName: "Host"
+    }
+  );
+
+  transport.emitPeerState("peer-1", "open");
+  transport.emitFrom("peer-1", buildMessage("peer-client-1", "hello", { displayName: "Peer 1" }));
+
+  host.startGame({
+    ...setupConfigN(3),
+    drawPile: true
+  });
+
+  assert.ok(host.getSnapshot().state.drawPile);
+  assert.equal(host.getSnapshot().state.players.length, 3);
+  assert.equal(host.getSnapshot().state.suits.length, 3);
+});
+
 test("Host session broadcasts waiting-room setup changes before the game starts", () => {
   const transport = new MockHostTransport();
   const host = createHostSession(

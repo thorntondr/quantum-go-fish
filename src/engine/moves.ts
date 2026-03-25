@@ -74,6 +74,29 @@ function finalizeAsGameOver(state: GameState, winner: string, reason: WinReason)
   state.turnState.winReason = reason;
 }
 
+function applyDrawFromPile(state: GameState, player: string): void {
+  const drawPile = state.drawPile;
+  if (!drawPile) {
+    return;
+  }
+  const pile = drawPile.playerId;
+  if (state.handSizes[pile] <= 0) {
+    return;
+  }
+
+  for (const suit of state.suits) {
+    if (state.min[pile][suit] > 0) {
+      state.min[pile][suit] -= 1;
+    }
+    if (state.max[pile][suit] > 0) {
+      state.max[player][suit] = Math.min(state.suitTotals[suit], state.max[player][suit] + 1);
+    }
+  }
+
+  state.handSizes[player] += 1;
+  state.handSizes[pile] -= 1;
+}
+
 export function applyMove(input: GameState, move: Move): GameState {
   assertInvariants(input);
 
@@ -138,6 +161,7 @@ export function applyMove(input: GameState, move: Move): GameState {
     state.max[target][suit] = Math.max(0, state.max[target][suit] - transferCount);
   } else {
     state.max[target][suit] = 0;
+    applyDrawFromPile(state, asker);
   }
 
   state.turnState.pendingAsk = undefined;

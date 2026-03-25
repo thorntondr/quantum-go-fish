@@ -181,6 +181,7 @@ export function createHostSession(
       startingPlayer,
       initialSuitMax: template.initialSuitMax,
       allOrNothing: template.allOrNothing,
+      drawPile: template.drawPile,
       version: template.version
     };
   }
