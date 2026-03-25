@@ -41,6 +41,7 @@ export interface GameState {
   handSizes: Record<PlayerId, number>;
   min: BoundsMatrix;
   max: BoundsMatrix;
+  allOrNothing: boolean;
   inactivePlayers: PlayerId[];
   turnState: TurnState;
   version: number;
@@ -48,7 +49,7 @@ export interface GameState {
 
 export type Move =
   | { kind: "Ask"; asker: PlayerId; target: PlayerId; suit: SuitId }
-  | { kind: "AnswerYes"; target: PlayerId; suit: SuitId }
+  | { kind: "AnswerYes"; target: PlayerId; suit: SuitId; count?: number }
   | { kind: "AnswerNo"; target: PlayerId; suit: SuitId };
 
 export type LegalResult = { ok: true } | { ok: false; reason: string };
@@ -60,6 +61,7 @@ export interface SetupConfig {
   handSizes: Record<PlayerId, number>;
   startingPlayer: PlayerId;
   initialSuitMax?: number;
+  allOrNothing?: boolean;
   version?: number;
 }
 

@@ -65,6 +65,23 @@ export function isLegalMove(state: GameState, move: Move): LegalResult {
     if (state.max[move.target][move.suit] <= 0) {
       return { ok: false, reason: "AnswerYes illegal: target does not have asked suit." };
     }
+    if (!state.allOrNothing) {
+      if (move.count !== undefined && move.count !== 1) {
+        return { ok: false, reason: "AnswerYes illegal: transfer count is only used with all-or-nothing enabled." };
+      }
+      return { ok: true };
+    }
+
+    const count = move.count;
+    if (typeof count !== "number" || !Number.isInteger(count)) {
+      return { ok: false, reason: "AnswerYes illegal: all-or-nothing requires an exact transfer count." };
+    }
+    if (count < state.min[move.target][move.suit] || count > state.max[move.target][move.suit]) {
+      return {
+        ok: false,
+        reason: `AnswerYes illegal: transfer count must be between ${state.min[move.target][move.suit]} and ${state.max[move.target][move.suit]}.`
+      };
+    }
     return { ok: true };
   }
 

@@ -58,6 +58,10 @@ export function validateSetup(config: SetupConfig): void {
       throw new Error("Initial suit max must be an integer from 1 to 4.");
     }
   }
+
+  if (config.allOrNothing !== undefined && typeof config.allOrNothing !== "boolean") {
+    throw new Error("All-or-nothing rule flag must be a boolean when provided.");
+  }
 }
 
 function createInitialStateInternal(config: SetupConfig, options: CreateInitialStateOptions = {}): GameState {
@@ -70,6 +74,7 @@ function createInitialStateInternal(config: SetupConfig, options: CreateInitialS
     handSizes: { ...config.handSizes },
     min: buildMatrix(config.players, config.suits, () => 0),
     max: buildMatrix(config.players, config.suits, (suit) => Math.min(config.suitTotals[suit], initialSuitMax)),
+    allOrNothing: config.allOrNothing ?? false,
     inactivePlayers: [],
     turnState: {
       phase: "Idle",
@@ -103,6 +108,7 @@ export function cloneState(state: GameState): GameState {
     handSizes: { ...state.handSizes },
     min: deepCloneMatrix(state.min, state.players, state.suits),
     max: deepCloneMatrix(state.max, state.players, state.suits),
+    allOrNothing: state.allOrNothing,
     inactivePlayers: [...state.inactivePlayers],
     turnState: {
       phase: state.turnState.phase,

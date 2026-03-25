@@ -98,10 +98,29 @@ function formatStateTable(state: GameState): string {
 function legalMovesText(state: GameState): string {
   if (state.turnState.pendingAsk) {
     const pending = state.turnState.pendingAsk;
-    const yesMove: Move = { kind: "AnswerYes", target: pending.target, suit: pending.suit };
     const noMove: Move = { kind: "AnswerNo", target: pending.target, suit: pending.suit };
-    const yesLegal = isLegalMove(state, yesMove);
     const noLegal = isLegalMove(state, noMove);
+
+    if (state.allOrNothing) {
+      const minCount = state.min[pending.target][pending.suit];
+      const maxCount = state.max[pending.target][pending.suit];
+      const yesLines: string[] = [];
+      for (let count = minCount; count <= maxCount; count += 1) {
+        const yesMove: Move = { kind: "AnswerYes", target: pending.target, suit: pending.suit, count };
+        const yesLegal = isLegalMove(state, yesMove);
+        yesLines.push(
+          `  yes ${count} (${pending.target}, ${pending.suit}) -> ${yesLegal.ok ? "legal" : yesLegal.reason}`
+        );
+      }
+      return [
+        "Legal responses:",
+        ...yesLines,
+        `  no     (${pending.target}, ${pending.suit}) -> ${noLegal.ok ? "legal" : noLegal.reason}`
+      ].join("\n");
+    }
+
+    const yesMove: Move = { kind: "AnswerYes", target: pending.target, suit: pending.suit };
+    const yesLegal = isLegalMove(state, yesMove);
     return [
       "Legal responses:",
       `  yes (${pending.target}, ${pending.suit}) -> ${yesLegal.ok ? "legal" : yesLegal.reason}`,
@@ -132,7 +151,7 @@ function shellHelp(): string {
     "  show                     Show current state table",
     "  legal                    Show legal moves from current state",
     "  ask <target> <suit>      Submit Ask move (asker is current player)",
-    "  yes                      Submit AnswerYes for pending ask",
+    "  yes [count]              Submit AnswerYes for pending ask",
     "  no                       Submit AnswerNo for pending ask",
     "  move <json>              Apply a raw move JSON object",
     "  save <state-file>        Save serialized current state",
@@ -206,16 +225,32 @@ async function runShell(state: GameState): Promise<void> {
         }
         continue;
       }
-      if (line === "yes" || line === "no") {
+      if (line === "no" || line === "yes" || line.startsWith("yes ")) {
         const pending = currentState.turnState.pendingAsk;
         if (!pending) {
           console.log("No pending ask to answer.");
           continue;
         }
-        const move: Move =
-          line === "yes"
-            ? { kind: "AnswerYes", target: pending.target, suit: pending.suit }
-            : { kind: "AnswerNo", target: pending.target, suit: pending.suit };
+
+        let move: Move;
+        if (line === "no") {
+          move = { kind: "AnswerNo", target: pending.target, suit: pending.suit };
+        } else if (currentState.allOrNothing) {
+          const [, rawCount] = line.split(/\s+/, 2);
+          if (!rawCount) {
+            console.log("All-or-nothing is enabled. Use: yes <count>");
+            continue;
+          }
+          const count = Number.parseInt(rawCount, 10);
+          if (!Number.isInteger(count)) {
+            console.log("yes requires an integer count.");
+            continue;
+          }
+          move = { kind: "AnswerYes", target: pending.target, suit: pending.suit, count };
+        } else {
+          move = { kind: "AnswerYes", target: pending.target, suit: pending.suit };
+        }
+
         try {
           currentState = applyMove(currentState, move);
           console.log(formatStateTable(currentState));

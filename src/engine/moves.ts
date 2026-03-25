@@ -120,16 +120,22 @@ export function applyMove(input: GameState, move: Move): GameState {
   const suit = pending.suit;
 
   if (move.kind === "AnswerYes") {
-    state.min[target][suit] = Math.max(state.min[target][suit], 1);
+    const transferCount = state.allOrNothing ? move.count ?? 0 : 1;
+    if (state.allOrNothing) {
+      state.min[target][suit] = transferCount;
+      state.max[target][suit] = transferCount;
+    } else {
+      state.min[target][suit] = Math.max(state.min[target][suit], transferCount);
+    }
 
-    state.handSizes[asker] += 1;
-    state.handSizes[target] -= 1;
+    state.handSizes[asker] += transferCount;
+    state.handSizes[target] -= transferCount;
 
-    state.min[asker][suit] += 1;
-    state.max[asker][suit] += 1;
+    state.min[asker][suit] += transferCount;
+    state.max[asker][suit] += transferCount;
 
-    state.min[target][suit] = Math.max(0, state.min[target][suit] - 1);
-    state.max[target][suit] = Math.max(0, state.max[target][suit] - 1);
+    state.min[target][suit] = Math.max(0, state.min[target][suit] - transferCount);
+    state.max[target][suit] = Math.max(0, state.max[target][suit] - transferCount);
   } else {
     state.max[target][suit] = 0;
   }

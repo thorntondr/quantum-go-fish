@@ -173,3 +173,37 @@ test("Game ends when only one player has cards remaining", () => {
   assert.equal(next.turnState.winner, "A");
   assert.equal(next.turnState.winReason, "NotEnoughPlayers");
 });
+
+test("All-or-nothing AnswerYes transfers the declared exact count", () => {
+  let state = makeState();
+  state.allOrNothing = true;
+  state.min.B.S = 2;
+  state.max.B.S = 2;
+
+  state = applyMove(state, { kind: "Ask", asker: "A", target: "B", suit: "S" });
+  const next = applyMove(state, { kind: "AnswerYes", target: "B", suit: "S", count: 2 });
+
+  assert.equal(next.handSizes.A, 6);
+  assert.equal(next.handSizes.B, 2);
+  assert.equal(next.min.A.S, 3);
+  assert.equal(next.max.A.S, 4);
+  assert.equal(next.min.B.S, 0);
+  assert.equal(next.max.B.S, 0);
+  assert.equal(next.turnState.currentPlayer, "B");
+});
+
+test("All-or-nothing AnswerYes collapses the responder range to the declared count before transfer", () => {
+  let state = makeState();
+  state.allOrNothing = true;
+  state.min.B.S = 1;
+  state.max.B.S = 3;
+
+  state = applyMove(state, { kind: "Ask", asker: "A", target: "B", suit: "S" });
+  const next = applyMove(state, { kind: "AnswerYes", target: "B", suit: "S", count: 2 });
+
+  assert.equal(next.handSizes.A, 6);
+  assert.equal(next.handSizes.B, 2);
+  assert.equal(next.min.B.S, 0);
+  assert.equal(next.max.B.S, 0);
+  assert.equal(next.min.A.S, 3);
+});

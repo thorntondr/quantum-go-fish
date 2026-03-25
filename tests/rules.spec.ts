@@ -37,3 +37,17 @@ test("AnswerNo requires pending ask and min == 0", () => {
   const illegal = isLegalMove(state, { kind: "AnswerNo", target: "B", suit: "S" });
   assert.equal(illegal.ok, false);
 });
+
+test("AnswerYes under all-or-nothing requires an exact count within the known range", () => {
+  const state = makeState();
+  state.allOrNothing = true;
+  state.turnState.pendingAsk = { asker: "A", target: "B", suit: "S" };
+  state.min.B.S = 2;
+  state.max.B.S = 3;
+
+  assert.equal(isLegalMove(state, { kind: "AnswerYes", target: "B", suit: "S" }).ok, false);
+  assert.equal(isLegalMove(state, { kind: "AnswerYes", target: "B", suit: "S", count: 1 }).ok, false);
+  assert.equal(isLegalMove(state, { kind: "AnswerYes", target: "B", suit: "S", count: 2 }).ok, true);
+  assert.equal(isLegalMove(state, { kind: "AnswerYes", target: "B", suit: "S", count: 3 }).ok, true);
+  assert.equal(isLegalMove(state, { kind: "AnswerYes", target: "B", suit: "S", count: 4 }).ok, false);
+});

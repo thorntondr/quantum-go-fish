@@ -268,6 +268,7 @@ test("Peer session requests sync on commit sequence gap", () => {
     handSizes: { A: 4, B: 4 },
     min: { A: { S: 0, H: 0 }, B: { S: 0, H: 0 } },
     max: { A: { S: 4, H: 4 }, B: { S: 4, H: 4 } },
+    allOrNothing: false,
     inactivePlayers: [],
     turnState: { phase: "Idle" as const, currentPlayer: "A" },
     version: 1

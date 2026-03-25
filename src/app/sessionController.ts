@@ -180,6 +180,7 @@ export function createHostSession(
       handSizes,
       startingPlayer,
       initialSuitMax: template.initialSuitMax,
+      allOrNothing: template.allOrNothing,
       version: template.version
     };
   }

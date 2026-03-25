@@ -59,6 +59,15 @@ test("Setup rejects invalid initial suit max values", () => {
   assert.throws(() => createInitialState(config), /Initial suit max must be an integer from 1 to 4/);
 });
 
+test("Setup supports enabling all-or-nothing answers", () => {
+  const config = validConfig();
+  config.allOrNothing = true;
+
+  const state = createInitialState(config);
+
+  assert.equal(state.allOrNothing, true);
+});
+
 test("createInitialState propagates the initial bounds by default", () => {
   const config = forcedConfig();
 
