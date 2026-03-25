@@ -73,6 +73,10 @@
             <input id="maxThreeToggle" type="checkbox">
             <span>Max 3: players start with a per-suit maximum of 3</span>
           </label>
+          <label class="checkbox-row" style="margin-top: 10px;">
+            <input id="allOrNothingToggle" type="checkbox">
+            <span>All or nothing: a Yes answer must declare and transfer the exact count</span>
+          </label>
         </section>
       </div>
       <div class="controls-row" style="margin-top: 12px;">
@@ -105,6 +109,10 @@
             <select id="askSuit"></select>
           </label>
           <button id="askBtn" class="primary">Ask</button>
+          <label id="yesCountWrap" hidden>
+            Count
+            <select id="yesCount"></select>
+          </label>
           <button id="yesBtn">Answer Yes</button>
           <button id="noBtn">Answer No</button>
         </div>

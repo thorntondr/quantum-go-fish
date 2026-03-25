@@ -21,10 +21,13 @@ const errorRoot = requireEl("error");
 const stateRoot = requireEl("state");
 const rosterInput = requireEl("rosterInput") as HTMLTextAreaElement;
 const maxThreeToggle = getEl("maxThreeToggle") as HTMLInputElement | null;
+const allOrNothingToggle = getEl("allOrNothingToggle") as HTMLInputElement | null;
 const startBtn = requireEl("startBtn") as HTMLButtonElement;
 const askTarget = requireEl("askTarget") as HTMLSelectElement;
 const askSuit = requireEl("askSuit") as HTMLSelectElement;
 const askBtn = requireEl("askBtn") as HTMLButtonElement;
+const yesCountWrap = getEl("yesCountWrap");
+const yesCount = getEl("yesCount") as HTMLSelectElement | null;
 const yesBtn = requireEl("yesBtn") as HTMLButtonElement;
 const noBtn = requireEl("noBtn") as HTMLButtonElement;
 const infoBtn = getEl("infoBtn") as HTMLButtonElement | null;
@@ -139,6 +142,9 @@ function refreshSetupOptions(): void {
   if (maxThreeToggle) {
     maxThreeToggle.disabled = false;
   }
+  if (allOrNothingToggle) {
+    allOrNothingToggle.disabled = false;
+  }
 }
 
 function buildConfig(players: string[]): SetupConfig {
@@ -159,7 +165,8 @@ function buildConfig(players: string[]): SetupConfig {
     suitTotals,
     handSizes,
     startingPlayer: randomStartingPlayer(players),
-    initialSuitMax: maxThreeToggle?.checked ? 3 : 4
+    initialSuitMax: maxThreeToggle?.checked ? 3 : 4,
+    allOrNothing: allOrNothingToggle?.checked ?? false
   };
 }
 
@@ -192,22 +199,48 @@ function legalAsks(current: GameState, asker: string): Move[] {
   return moves;
 }
 
-function legalAnswerMoves(current: GameState): { yes: boolean; no: boolean } {
+function legalYesCounts(current: GameState): number[] {
   const pending = current.turnState.pendingAsk;
   if (!pending) {
-    return { yes: false, no: false };
+    return [];
   }
-  const yes = isLegalMove(current, {
-    kind: "AnswerYes",
-    target: pending.target,
-    suit: pending.suit
-  }).ok;
+  if (!current.allOrNothing) {
+    return isLegalMove(current, {
+      kind: "AnswerYes",
+      target: pending.target,
+      suit: pending.suit
+    }).ok
+      ? [1]
+      : [];
+  }
+  const counts: number[] = [];
+  for (let count = current.min[pending.target][pending.suit]; count <= current.max[pending.target][pending.suit]; count += 1) {
+    if (
+      isLegalMove(current, {
+        kind: "AnswerYes",
+        target: pending.target,
+        suit: pending.suit,
+        count
+      }).ok
+    ) {
+      counts.push(count);
+    }
+  }
+  return counts;
+}
+
+function legalAnswerMoves(current: GameState): { yes: boolean; no: boolean; yesCounts: number[] } {
+  const pending = current.turnState.pendingAsk;
+  if (!pending) {
+    return { yes: false, no: false, yesCounts: [] };
+  }
+  const yesCounts = legalYesCounts(current);
   const no = isLegalMove(current, {
     kind: "AnswerNo",
     target: pending.target,
     suit: pending.suit
   }).ok;
-  return { yes, no };
+  return { yes: yesCounts.length > 0, no, yesCounts };
 }
 
 function submitMove(move: Move): void {
@@ -277,6 +310,18 @@ function refreshControls(current: GameState): void {
   const answers = legalAnswerMoves(current);
   yesBtn.disabled = !answers.yes;
   noBtn.disabled = !answers.no;
+  if (yesCountWrap && yesCount) {
+    const showYesCount = Boolean(current.turnState.pendingAsk && current.allOrNothing);
+    yesCountWrap.hidden = !showYesCount;
+    if (showYesCount) {
+      yesCount.innerHTML = answers.yesCounts.map((count) => `<option value="${count}">${count}</option>`).join("");
+      yesCount.disabled = !answers.yes;
+      yesCount.value = answers.yesCounts[0] !== undefined ? String(answers.yesCounts[0]) : "";
+    } else {
+      yesCount.innerHTML = "";
+      yesCount.disabled = true;
+    }
+  }
 }
 
 function render(): void {
@@ -362,7 +407,20 @@ yesBtn.addEventListener("click", () => {
   if (!state || !state.turnState.pendingAsk) {
     return;
   }
-  submitMove({ kind: "AnswerYes", target: state.turnState.pendingAsk.target, suit: state.turnState.pendingAsk.suit });
+  const move: Move = {
+    kind: "AnswerYes",
+    target: state.turnState.pendingAsk.target,
+    suit: state.turnState.pendingAsk.suit
+  };
+  if (state.allOrNothing) {
+    const count = yesCount ? Number.parseInt(yesCount.value, 10) : Number.NaN;
+    if (!Number.isInteger(count)) {
+      setError("Select the exact count to transfer.");
+      return;
+    }
+    move.count = count;
+  }
+  submitMove(move);
 });
 
 noBtn.addEventListener("click", () => {

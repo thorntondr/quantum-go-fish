@@ -38,6 +38,7 @@ const gameRoomCode = getEl("gameRoomCode");
 const waitingRoster = getEl("waitingRoster");
 const waitingStartGameBtn = getEl("waitingStartGameBtn") as HTMLButtonElement | null;
 const maxThreeToggle = getEl("maxThreeToggle") as HTMLInputElement | null;
+const allOrNothingToggle = getEl("allOrNothingToggle") as HTMLInputElement | null;
 const shareRoomBtn = getEl("shareRoomBtn") as HTMLButtonElement | null;
 const shareRoomLink = getEl("shareRoomLink") as HTMLInputElement | null;
 const screenLanding = getEl("screenLanding");
@@ -47,6 +48,8 @@ const screenGame = getEl("screenGame");
 const askTarget = requireEl("askTarget") as HTMLSelectElement;
 const askSuit = requireEl("askSuit") as HTMLSelectElement;
 const askBtn = requireEl("askBtn") as HTMLButtonElement;
+const yesCountWrap = getEl("yesCountWrap");
+const yesCount = getEl("yesCount") as HTMLSelectElement | null;
 const yesBtn = requireEl("yesBtn") as HTMLButtonElement;
 const noBtn = requireEl("noBtn") as HTMLButtonElement;
 const leaveGameBtn = getEl("leaveGameBtn") as HTMLButtonElement | null;
@@ -66,6 +69,7 @@ const emojiSuggestions = getEl("emojiSuggestions");
 
 const MAX_PLAYERS = 13;
 let maxThreeEnabled = false;
+let allOrNothingEnabled = false;
 let state = createInitialState(buildConfig(1));
 let assignedPlayer: string | undefined;
 let gameStarted = false;
@@ -314,7 +318,8 @@ function buildConfig(playerCount: number): SetupConfig {
     suitTotals,
     handSizes,
     startingPlayer: players[0],
-    initialSuitMax: maxThreeEnabled ? 3 : 4
+    initialSuitMax: maxThreeEnabled ? 3 : 4,
+    allOrNothing: allOrNothingEnabled
   };
 }
 
@@ -340,22 +345,48 @@ function legalAsks(current: GameState, asker: string): Move[] {
   return moves;
 }
 
-function legalAnswerMoves(current: GameState): { yes: boolean; no: boolean } {
+function legalYesCounts(current: GameState): number[] {
   const pending = current.turnState.pendingAsk;
   if (!pending) {
-    return { yes: false, no: false };
+    return [];
   }
-  const yes = isLegalMove(current, {
-    kind: "AnswerYes",
-    target: pending.target,
-    suit: pending.suit
-  }).ok;
+  if (!current.allOrNothing) {
+    return isLegalMove(current, {
+      kind: "AnswerYes",
+      target: pending.target,
+      suit: pending.suit
+    }).ok
+      ? [1]
+      : [];
+  }
+  const counts: number[] = [];
+  for (let count = current.min[pending.target][pending.suit]; count <= current.max[pending.target][pending.suit]; count += 1) {
+    if (
+      isLegalMove(current, {
+        kind: "AnswerYes",
+        target: pending.target,
+        suit: pending.suit,
+        count
+      }).ok
+    ) {
+      counts.push(count);
+    }
+  }
+  return counts;
+}
+
+function legalAnswerMoves(current: GameState): { yes: boolean; no: boolean; yesCounts: number[] } {
+  const pending = current.turnState.pendingAsk;
+  if (!pending) {
+    return { yes: false, no: false, yesCounts: [] };
+  }
+  const yesCounts = legalYesCounts(current);
   const no = isLegalMove(current, {
     kind: "AnswerNo",
     target: pending.target,
     suit: pending.suit
   }).ok;
-  return { yes, no };
+  return { yes: yesCounts.length > 0, no, yesCounts };
 }
 
 function renderLegalMoves(current: GameState): void {
@@ -373,11 +404,14 @@ function renderLegalMoves(current: GameState): void {
   if (current.turnState.pendingAsk) {
     const p = current.turnState.pendingAsk;
     const answers = legalAnswerMoves(current);
-    legalMoves.textContent = [
+    const lines = [
       `Pending ask: ${formatPlayer(p.asker)} -> ${formatPlayer(p.target)} for ${formatSuit(p.suit)}`,
-      `yes: ${answers.yes ? "legal" : "illegal"}`,
+      current.allOrNothing
+        ? `yes counts: ${answers.yesCounts.length > 0 ? answers.yesCounts.join(", ") : "none"}`
+        : `yes: ${answers.yes ? "legal" : "illegal"}`,
       `no:  ${answers.no ? "legal" : "illegal"}`
-    ].join("\n");
+    ];
+    legalMoves.textContent = lines.join("\n");
     return;
   }
   const asks = legalAsks(current, assignedPlayer);
@@ -404,16 +438,16 @@ function canAsk(current: GameState): boolean {
   return legalAsks(current, assignedPlayer).length > 0;
 }
 
-function canAnswer(current: GameState): { yes: boolean; no: boolean } {
+function canAnswer(current: GameState): { yes: boolean; no: boolean; yesCounts: number[] } {
   const pending = current.turnState.pendingAsk;
   if (!assignedPlayer || !gameStarted || !pending) {
-    return { yes: false, no: false };
+    return { yes: false, no: false, yesCounts: [] };
   }
   if (current.inactivePlayers.includes(assignedPlayer)) {
-    return { yes: false, no: false };
+    return { yes: false, no: false, yesCounts: [] };
   }
   if (pending.target !== assignedPlayer) {
-    return { yes: false, no: false };
+    return { yes: false, no: false, yesCounts: [] };
   }
   const legal = legalAnswerMoves(current);
   return legal;
@@ -451,6 +485,24 @@ function refreshControls(current: GameState): void {
     maxThreeToggle.checked = maxThreeEnabled;
     maxThreeToggle.disabled = !hostSession;
     syncingMaxThreeToggle = false;
+  }
+  if (allOrNothingToggle) {
+    syncingMaxThreeToggle = true;
+    allOrNothingToggle.checked = allOrNothingEnabled;
+    allOrNothingToggle.disabled = !hostSession;
+    syncingMaxThreeToggle = false;
+  }
+  if (yesCountWrap && yesCount) {
+    const showYesCount = Boolean(state.turnState.pendingAsk && state.allOrNothing);
+    yesCountWrap.hidden = !showYesCount;
+    if (showYesCount) {
+      yesCount.innerHTML = answers.yesCounts.map((count) => `<option value="${count}">${count}</option>`).join("");
+      yesCount.disabled = !answers.yes;
+      yesCount.value = answers.yesCounts[0] !== undefined ? String(answers.yesCounts[0]) : "";
+    } else {
+      yesCount.innerHTML = "";
+      yesCount.disabled = true;
+    }
   }
 }
 
@@ -577,6 +629,7 @@ function sessionHooks() {
     },
     onSetupChanged: (setup: SetupConfig) => {
       maxThreeEnabled = setup.initialSuitMax === 3;
+      allOrNothingEnabled = setup.allOrNothing === true;
       render();
       persistSession();
     },
@@ -610,6 +663,7 @@ function closeSession(): void {
   assignedPlayer = undefined;
   gameStarted = false;
   maxThreeEnabled = false;
+  allOrNothingEnabled = false;
   if (waitingRoster) {
     waitingRoster.innerHTML = "<li class=\"roster-item\">No connected players yet.</li>";
   }
@@ -622,6 +676,9 @@ function closeSession(): void {
   }
   if (maxThreeToggle) {
     maxThreeToggle.checked = false;
+  }
+  if (allOrNothingToggle) {
+    allOrNothingToggle.checked = false;
   }
   clearEventLog();
   setDepartureNotice("");
@@ -860,6 +917,24 @@ if (maxThreeToggle) {
   });
 }
 
+if (allOrNothingToggle) {
+  allOrNothingToggle.addEventListener("change", () => {
+    if (syncingMaxThreeToggle) {
+      return;
+    }
+    if (!hostSession) {
+      allOrNothingToggle.checked = allOrNothingEnabled;
+      return;
+    }
+    if (allOrNothingEnabled === allOrNothingToggle.checked) {
+      return;
+    }
+    allOrNothingEnabled = allOrNothingToggle.checked;
+    hostSession.updateSetup(buildConfig(MAX_PLAYERS));
+    render();
+  });
+}
+
 if (playAgainBtn) {
   playAgainBtn.addEventListener("click", () => {
     if (!hostSession) {
@@ -958,7 +1033,16 @@ yesBtn.addEventListener("click", () => {
     setMoveError("No pending ask.");
     return;
   }
-  submitMove({ kind: "AnswerYes", target: pending.target, suit: pending.suit });
+  const move: Move = { kind: "AnswerYes", target: pending.target, suit: pending.suit };
+  if (state.allOrNothing) {
+    const count = yesCount ? Number.parseInt(yesCount.value, 10) : Number.NaN;
+    if (!Number.isInteger(count)) {
+      setMoveError("Select the exact count to transfer.");
+      return;
+    }
+    move.count = count;
+  }
+  submitMove(move);
 });
 
 noBtn.addEventListener("click", () => {
