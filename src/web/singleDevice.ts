@@ -22,6 +22,7 @@ const stateRoot = requireEl("state");
 const rosterInput = requireEl("rosterInput") as HTMLTextAreaElement;
 const maxThreeToggle = getEl("maxThreeToggle") as HTMLInputElement | null;
 const allOrNothingToggle = getEl("allOrNothingToggle") as HTMLInputElement | null;
+const drawPileToggle = getEl("drawPileToggle") as HTMLInputElement | null;
 const startBtn = requireEl("startBtn") as HTMLButtonElement;
 const askTarget = requireEl("askTarget") as HTMLSelectElement;
 const askSuit = requireEl("askSuit") as HTMLSelectElement;
@@ -72,6 +73,9 @@ function formatSuit(suitId: string): string {
 }
 
 function formatPlayer(playerId: string): string {
+  if (state?.drawPile?.playerId === playerId) {
+    return "Draw Pile";
+  }
   return playerId;
 }
 
@@ -145,6 +149,9 @@ function refreshSetupOptions(): void {
   if (allOrNothingToggle) {
     allOrNothingToggle.disabled = false;
   }
+  if (drawPileToggle) {
+    drawPileToggle.disabled = false;
+  }
 }
 
 function buildConfig(players: string[]): SetupConfig {
@@ -166,7 +173,8 @@ function buildConfig(players: string[]): SetupConfig {
     handSizes,
     startingPlayer: randomStartingPlayer(players),
     initialSuitMax: maxThreeToggle?.checked ? 3 : 4,
-    allOrNothing: allOrNothingToggle?.checked ?? false
+    allOrNothing: allOrNothingToggle?.checked ?? false,
+    drawPile: drawPileToggle?.checked ?? false
   };
 }
 

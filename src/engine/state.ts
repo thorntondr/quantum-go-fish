@@ -30,6 +30,16 @@ function uniqueReservedId(existing: string[], base: string): string {
   return candidate;
 }
 
+function nextGeneratedSuitId(existing: string[]): string {
+  let index = existing.length + 1;
+  let candidate = `S${index}`;
+  while (existing.includes(candidate)) {
+    index += 1;
+    candidate = `S${index}`;
+  }
+  return candidate;
+}
+
 export function validateSetup(config: SetupConfig): void {
   if (config.players.length === 0) {
     throw new Error("Setup requires at least one player.");
@@ -84,7 +94,7 @@ function createInitialStateInternal(config: SetupConfig, options: CreateInitialS
   const drawPile = config.drawPile
     ? {
         playerId: uniqueReservedId(config.players, "__DRAW_PILE__"),
-        suitId: uniqueReservedId(config.suits, "__DRAW_SUIT__")
+        suitId: nextGeneratedSuitId(config.suits)
       }
     : undefined;
   const players = drawPile ? [...config.players, drawPile.playerId] : [...config.players];

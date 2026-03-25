@@ -39,6 +39,7 @@ const waitingRoster = getEl("waitingRoster");
 const waitingStartGameBtn = getEl("waitingStartGameBtn") as HTMLButtonElement | null;
 const maxThreeToggle = getEl("maxThreeToggle") as HTMLInputElement | null;
 const allOrNothingToggle = getEl("allOrNothingToggle") as HTMLInputElement | null;
+const drawPileToggle = getEl("drawPileToggle") as HTMLInputElement | null;
 const shareRoomBtn = getEl("shareRoomBtn") as HTMLButtonElement | null;
 const shareRoomLink = getEl("shareRoomLink") as HTMLInputElement | null;
 const screenLanding = getEl("screenLanding");
@@ -70,6 +71,7 @@ const emojiSuggestions = getEl("emojiSuggestions");
 const MAX_PLAYERS = 13;
 let maxThreeEnabled = false;
 let allOrNothingEnabled = false;
+let drawPileEnabled = false;
 let state = createInitialState(buildConfig(1));
 let assignedPlayer: string | undefined;
 let gameStarted = false;
@@ -143,6 +145,9 @@ function updatePlayerLabels(connections: ConnectionState[]): void {
 }
 
 function formatPlayer(playerId: string): string {
+  if (state.drawPile?.playerId === playerId) {
+    return "Draw Pile";
+  }
   return playerLabelById.get(playerId) ?? playerId;
 }
 
@@ -319,7 +324,8 @@ function buildConfig(playerCount: number): SetupConfig {
     handSizes,
     startingPlayer: players[0],
     initialSuitMax: maxThreeEnabled ? 3 : 4,
-    allOrNothing: allOrNothingEnabled
+    allOrNothing: allOrNothingEnabled,
+    drawPile: drawPileEnabled
   };
 }
 
@@ -492,6 +498,12 @@ function refreshControls(current: GameState): void {
     allOrNothingToggle.disabled = !hostSession;
     syncingMaxThreeToggle = false;
   }
+  if (drawPileToggle) {
+    syncingMaxThreeToggle = true;
+    drawPileToggle.checked = drawPileEnabled;
+    drawPileToggle.disabled = !hostSession;
+    syncingMaxThreeToggle = false;
+  }
   if (yesCountWrap && yesCount) {
     const showYesCount = Boolean(state.turnState.pendingAsk && state.allOrNothing);
     yesCountWrap.hidden = !showYesCount;
@@ -630,6 +642,7 @@ function sessionHooks() {
     onSetupChanged: (setup: SetupConfig) => {
       maxThreeEnabled = setup.initialSuitMax === 3;
       allOrNothingEnabled = setup.allOrNothing === true;
+      drawPileEnabled = setup.drawPile === true;
       render();
       persistSession();
     },
@@ -664,6 +677,7 @@ function closeSession(): void {
   gameStarted = false;
   maxThreeEnabled = false;
   allOrNothingEnabled = false;
+  drawPileEnabled = false;
   if (waitingRoster) {
     waitingRoster.innerHTML = "<li class=\"roster-item\">No connected players yet.</li>";
   }
@@ -679,6 +693,9 @@ function closeSession(): void {
   }
   if (allOrNothingToggle) {
     allOrNothingToggle.checked = false;
+  }
+  if (drawPileToggle) {
+    drawPileToggle.checked = false;
   }
   clearEventLog();
   setDepartureNotice("");
@@ -930,6 +947,24 @@ if (allOrNothingToggle) {
       return;
     }
     allOrNothingEnabled = allOrNothingToggle.checked;
+    hostSession.updateSetup(buildConfig(MAX_PLAYERS));
+    render();
+  });
+}
+
+if (drawPileToggle) {
+  drawPileToggle.addEventListener("change", () => {
+    if (syncingMaxThreeToggle) {
+      return;
+    }
+    if (!hostSession) {
+      drawPileToggle.checked = drawPileEnabled;
+      return;
+    }
+    if (drawPileEnabled === drawPileToggle.checked) {
+      return;
+    }
+    drawPileEnabled = drawPileToggle.checked;
     hostSession.updateSetup(buildConfig(MAX_PLAYERS));
     render();
   });
