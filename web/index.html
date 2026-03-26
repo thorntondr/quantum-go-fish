@@ -20,9 +20,13 @@
         <button id="infoBtn" class="alt">How to Play</button>
         <a id="modeSwitchLink" href="./multi_device_beta.html" class="button-link">Multi-Device (Beta)</a>
       </div>
+      <div id="activeGameActions" class="controls-row" style="margin-top: 8px;" hidden>
+        <button id="playAgainBtn" class="primary">Play Again</button>
+        <button id="startOverBtn">Start Over</button>
+      </div>
     </section>
 
-    <section class="panel">
+    <section id="rosterPanel" class="panel">
       <h2>Roster</h2>
       <label>
         Players (comma or newline separated)
@@ -46,7 +50,7 @@
       </div>
     </section>
 
-    <section class="panel">
+    <section id="movesPanel" class="panel" hidden>
       <h2>Moves</h2>
       <div class="controls-row">
         <label>
@@ -67,7 +71,7 @@
       </div>
     </section>
 
-    <section class="panel">
+    <section id="gameStatePanel" class="panel" hidden>
       <h2>Game State</h2>
       <div id="state"></div>
     </section>

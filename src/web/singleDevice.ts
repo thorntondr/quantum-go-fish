@@ -20,11 +20,17 @@ const turnActionNotice = getEl("turnActionNotice");
 const pendingAskNotice = getEl("pendingAskNotice");
 const errorRoot = requireEl("error");
 const stateRoot = requireEl("state");
+const rosterPanel = getEl("rosterPanel");
 const rosterInput = requireEl("rosterInput") as HTMLTextAreaElement;
 const maxThreeToggle = getEl("maxThreeToggle") as HTMLInputElement | null;
 const allOrNothingToggle = getEl("allOrNothingToggle") as HTMLInputElement | null;
 const drawPileToggle = getEl("drawPileToggle") as HTMLInputElement | null;
 const startBtn = requireEl("startBtn") as HTMLButtonElement;
+const activeGameActions = getEl("activeGameActions");
+const playAgainBtn = getEl("playAgainBtn") as HTMLButtonElement | null;
+const startOverBtn = getEl("startOverBtn") as HTMLButtonElement | null;
+const movesPanel = getEl("movesPanel");
+const gameStatePanel = getEl("gameStatePanel");
 const askTarget = requireEl("askTarget") as HTMLSelectElement;
 const askSuit = requireEl("askSuit") as HTMLSelectElement;
 const askBtn = requireEl("askBtn") as HTMLButtonElement;
@@ -186,6 +192,27 @@ function parseRoster(raw: string): string[] {
     .filter((value) => value.length > 0);
 }
 
+function startGameFromCurrentSetup(): void {
+  const roster = parseRoster(rosterInput.value);
+  if (roster.length < 2) {
+    setError("Enter at least two player names.");
+    return;
+  }
+  clearError();
+  suitMetaById = new Map();
+  state = createInitialState(buildConfig(roster));
+  render();
+}
+
+function resetToSetupState(): void {
+  clearError();
+  state = undefined;
+  suitMetaById = new Map();
+  viewPlayerId = undefined;
+  selectedAskTarget = undefined;
+  render();
+}
+
 function legalAsks(current: GameState, asker: string): Move[] {
   const moves: Move[] = [];
   if (current.inactivePlayers.includes(asker)) {
@@ -337,7 +364,20 @@ function render(): void {
   if (modeSwitchLink) {
     modeSwitchLink.hidden = Boolean(state);
   }
+  if (rosterPanel) {
+    rosterPanel.hidden = Boolean(state);
+  }
+  if (activeGameActions) {
+    activeGameActions.hidden = !state;
+  }
+  if (movesPanel) {
+    movesPanel.hidden = !state;
+  }
+  if (gameStatePanel) {
+    gameStatePanel.hidden = !state;
+  }
   if (!state) {
+    statusRoot.textContent = "";
     if (turnActionNotice) {
       turnActionNotice.textContent = "";
       turnActionNotice.hidden = true;
@@ -373,15 +413,7 @@ function render(): void {
 }
 
 startBtn.addEventListener("click", () => {
-  const roster = parseRoster(rosterInput.value);
-  if (roster.length < 2) {
-    setError("Enter at least two player names.");
-    return;
-  }
-  clearError();
-  suitMetaById = new Map();
-  state = createInitialState(buildConfig(roster));
-  render();
+  startGameFromCurrentSetup();
 });
 
 rosterInput.addEventListener("input", () => {
@@ -438,6 +470,18 @@ noBtn.addEventListener("click", () => {
   }
   submitMove({ kind: "AnswerNo", target: state.turnState.pendingAsk.target, suit: state.turnState.pendingAsk.suit });
 });
+
+if (playAgainBtn) {
+  playAgainBtn.addEventListener("click", () => {
+    startGameFromCurrentSetup();
+  });
+}
+
+if (startOverBtn) {
+  startOverBtn.addEventListener("click", () => {
+    resetToSetupState();
+  });
+}
 
 refreshSetupOptions();
 render();
