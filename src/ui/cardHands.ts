@@ -64,6 +64,132 @@ function rotatePlayersFromLocal(players: PlayerId[], localPlayerId?: PlayerId): 
   return players.slice(localIndex + 1).concat(players.slice(0, localIndex));
 }
 
+function assignMinimumBands(
+  suits: SuitId[],
+  initialRemaining: Record<SuitId, number>,
+  cardCount: number,
+  minPerCard: number
+): { chosen: Set<SuitId>[]; remaining: Record<SuitId, number> } | undefined {
+  const remaining: Record<SuitId, number> = { ...initialRemaining };
+  const chosen = Array.from({ length: cardCount }, () => new Set<SuitId>());
+
+  const canStillSatisfy = (): boolean => {
+    let openSlots = 0;
+    let available = 0;
+
+    for (const suit of suits) {
+      available += remaining[suit] ?? 0;
+    }
+
+    for (const card of chosen) {
+      const need = Math.max(0, minPerCard - card.size);
+      openSlots += need;
+      if (need === 0) {
+        continue;
+      }
+      let options = 0;
+      for (const suit of suits) {
+        if ((remaining[suit] ?? 0) > 0 && !card.has(suit)) {
+          options += 1;
+        }
+      }
+      if (options < need) {
+        return false;
+      }
+    }
+
+    return available >= openSlots;
+  };
+
+  const search = (): boolean => {
+    let nextCardIndex = -1;
+    let nextOptions: SuitId[] | undefined;
+
+    for (let i = 0; i < chosen.length; i += 1) {
+      if (chosen[i].size >= minPerCard) {
+        continue;
+      }
+      const options = suits.filter((suit) => (remaining[suit] ?? 0) > 0 && !chosen[i].has(suit));
+      if (options.length === 0) {
+        return false;
+      }
+      if (!nextOptions || options.length < nextOptions.length) {
+        nextCardIndex = i;
+        nextOptions = options;
+      }
+    }
+
+    if (nextCardIndex === -1 || !nextOptions) {
+      return true;
+    }
+
+    nextOptions.sort((a, b) => {
+      const diff = (remaining[b] ?? 0) - (remaining[a] ?? 0);
+      if (diff !== 0) {
+        return diff;
+      }
+      return suits.indexOf(a) - suits.indexOf(b);
+    });
+
+    for (const suit of nextOptions) {
+      chosen[nextCardIndex].add(suit);
+      remaining[suit] -= 1;
+      if (canStillSatisfy() && search()) {
+        return true;
+      }
+      remaining[suit] += 1;
+      chosen[nextCardIndex].delete(suit);
+    }
+
+    return false;
+  };
+
+  if (!canStillSatisfy() || !search()) {
+    return undefined;
+  }
+
+  return { chosen, remaining };
+}
+
+function assignMinimumBandsBestEffort(
+  suits: SuitId[],
+  initialRemaining: Record<SuitId, number>,
+  cardCount: number,
+  minPerCard: number
+): { chosen: Set<SuitId>[]; remaining: Record<SuitId, number> } {
+  const remaining: Record<SuitId, number> = { ...initialRemaining };
+  const chosen = Array.from({ length: cardCount }, () => new Set<SuitId>());
+
+  const pickSuit = (exclude: Set<SuitId>): SuitId | undefined => {
+    let best: SuitId | undefined;
+    for (const suit of suits) {
+      if (exclude.has(suit)) {
+        continue;
+      }
+      if ((remaining[suit] ?? 0) <= 0) {
+        continue;
+      }
+      if (!best || (remaining[suit] ?? 0) > (remaining[best] ?? 0)) {
+        best = suit;
+      }
+    }
+    return best;
+  };
+
+  for (let i = 0; i < minPerCard; i += 1) {
+    for (let j = 0; j < chosen.length; j += 1) {
+      const suit = pickSuit(chosen[j]);
+      if (!suit) {
+        continue;
+      }
+      chosen[j].add(suit);
+      remaining[suit] -= 1;
+    }
+  }
+
+  return { chosen, remaining };
+}
+
 function buildCardsForPlayer(state: GameState, playerId: PlayerId): CardModel[] {
   const total = state.handSizes[playerId] ?? 0;
   const cards: CardModel[] = Array.from({ length: total }, () => ({ bands: [] }));
@@ -88,34 +214,14 @@ function buildCardsForPlayer(state: GameState, playerId: PlayerId): CardModel[] 
   }
 
   const minPerCard = 2;
-
-  const pickSuit = (exclude: Set<SuitId>): SuitId | undefined => {
-    let best: SuitId | undefined;
-    for (const suit of state.suits) {
-      if (exclude.has(suit)) {
-        continue;
-      }
-      if (remaining[suit] <= 0) {
-        continue;
-      }
-      if (!best || remaining[suit] > remaining[best]) {
-        best = suit;
-      }
-    }
-    return best;
-  };
-
-  const chosen = Array.from(uncertain, () => new Set<SuitId>());
-  for (let i = 0; i < minPerCard; i += 1) {
-    for (let j = 0; j < uncertain.length; j += 1) {
-      const suit = pickSuit(chosen[j]);
-      if (!suit) {
-        continue;
-      }
-      chosen[j].add(suit);
-      remaining[suit] -= 1;
-    }
+  const minimumAssignment =
+    assignMinimumBands(state.suits, remaining, uncertain.length, minPerCard) ??
+    assignMinimumBandsBestEffort(state.suits, remaining, uncertain.length, minPerCard);
+  const chosen = minimumAssignment.chosen;
+  for (const suit of state.suits) {
+    remaining[suit] = minimumAssignment.remaining[suit] ?? 0;
   }
+
   for (let j = 0; j < uncertain.length; j += 1) {
     if (chosen[j].size < minPerCard) {
       chosen[j].add(UNKNOWN_SUIT_ID);

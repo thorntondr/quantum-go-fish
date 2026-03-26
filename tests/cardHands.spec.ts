@@ -28,6 +28,14 @@ const sixSuitConfig: SetupConfig = {
   startingPlayer: "A"
 };
 
+const threeSuitConfig: SetupConfig = {
+  players: ["A", "B", "C"],
+  suits: ["S1", "S2", "S3"],
+  suitTotals: { S1: 4, S2: 4, S3: 4 },
+  handSizes: { A: 4, B: 4, C: 4 },
+  startingPlayer: "A"
+};
+
 function render(localPlayerId?: string): string {
   return renderCardHands(createInitialState(config), {
     formatPlayer: (playerId) => playerId,
@@ -203,6 +211,44 @@ test("renderCardHands shrinks front-card content styling for six-band cards", ()
 
   assert.match(html, /--band-name-size: 0.48rem;/);
   assert.match(html, /--band-center-gap: 1px;/);
+});
+
+test("renderCardHands gives each unresolved card two real bands when a valid distribution exists (a)", () => {
+  const state = createInitialState(threeSuitConfig);
+  state.handSizes.A = 3;
+  state.handSizes.B = 0;
+  state.handSizes.C = 0;
+
+  state.max.A.S1 = 2;
+  state.max.A.S2 = 1;
+  state.max.A.S3 = 3;
+
+  const html = renderCardHands(state, {
+    formatPlayer: (playerId) => playerId,
+    getSuitMeta: () => undefined,
+    localPlayerId: "A"
+  });
+
+  assert.equal((html.match(/class="card-band"/g) ?? []).length, 6);
+});
+
+test("renderCardHands gives each unresolved card two real bands when a valid distribution exists (b)", () => {
+  const state = createInitialState(threeSuitConfig);
+  state.handSizes.A = 3;
+  state.handSizes.B = 0;
+  state.handSizes.C = 0;
+
+  state.max.A.S1 = 2;
+  state.max.A.S2 = 2;
+  state.max.A.S3 = 2;
+
+  const html = renderCardHands(state, {
+    formatPlayer: (playerId) => playerId,
+    getSuitMeta: () => undefined,
+    localPlayerId: "A"
+  });
+
+  assert.equal((html.match(/class="card-band"/g) ?? []).length, 6);
 });
 
 test("renderCardHands renders the draw pile in its own dedicated section before other opponents", () => {
