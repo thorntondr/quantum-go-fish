@@ -4,7 +4,7 @@
 Optional rules variants to try (can be implemented one at a time):
     - [x] Max 3: All player's per-suit maximums start at 3 instead of 4.  This means that you will need to acquire at least one card from an opponent to get four of a kind.
     - [x] All or nothing: When answering "Yes," you must transfer all of your cards of that suit.  This means that in addition to saying "Yes," you must also pick a number in the range [min, max].
-    - [ ] Draw Pile: Add one extra suit to the deck and a draw pile of four cards.  When an oppoent says "No," you have to go fish.  The draw pile can be tracked in the game state and display as if it were an extra player, but it does not take turns.
+    - [x] Draw Pile: Add one extra suit to the deck and a draw pile of four cards.  When an oppoent says "No," you have to go fish.  The draw pile can be tracked in the game state and display as if it were an extra player, but it does not take turns.
         - Upon transferring:
             - For each suit:
                 - If the draw pile minimum is greater than zero, decrement it
@@ -13,3 +13,18 @@ Optional rules variants to try (can be implemented one at a time):
             - Decrement the draw pile's card total
             - Propagate
     - [ ] Dummy player: Similar to a draw pile, but simpler as the cards in the dummy player's hand are inaccessible.  A dummy player is just a player that is inactive to begin with.
+- [ ] Review propagation algorithm to ensure it is as complete as possible
+- [ ] Options to increase difficulty:
+    - [ ] Hide colors/symbols on opponents hands
+    - [ ] Hide colors/symbols on all hands, including yours
+    - [ ] Hide cards, only show table
+    - [ ] Hide cards and table, but show list of events (and current hand sizes?) (reveal table at game over)
+    - [ ] Instead of automatically ending the game on full collapse, a player may win on their turn by correctly filling in an empty game state table.
+        - Add a button to Moves for the current player to click if they think they have fully solved the card counts for all players.
+        - What should the label for the button be?
+        - The button is inactive until the game state is resolved, but a player only gets one chance per turn to guess the full state.  If they fail, they must take their turn as normal and play continues.
+    - [ ] In addition to hiding game state, don't filter out illegal moves.  If any player makes an illegal move, then everyone loses.
+    - [ ] Instead of waiting for full resolution to enable the button, have it always enabled
+        - Each player only gets one chance *per game*, so add a confirmation dialog
+        - If the player proceeds, but the engine knows that not all cards have resolved, then the player uses up their one guess.  They must take their turn as normal and play continues. 
+        - If the game state *is* fully resoolved, we will present them with the input table.  If they are correct, they win.  If they are incorrect, then they must take their turn as normal and play continues.
