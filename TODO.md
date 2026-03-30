@@ -28,4 +28,4 @@ Optional rules variants to try (can be implemented one at a time):
         - Each player only gets one chance *per game*, so add a confirmation dialog
         - If the player proceeds, but the engine knows that not all cards have resolved, then the player uses up their one guess.  They must take their turn as normal and play continues. 
         - If the game state *is* fully resoolved, we will present them with the input table.  If they are correct, they win.  If they are incorrect, then they must take their turn as normal and play continues.
-- [ ] Add some basic analytics (Umami, e.g.)
+- [x] Add some basic analytics (Umami, e.g.)
