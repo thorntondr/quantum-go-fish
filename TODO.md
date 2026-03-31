@@ -12,9 +12,9 @@ Optional rules variants to try (can be implemented one at a time):
             - Increment the player's card total
             - Decrement the draw pile's card total
             - Propagate
-    - [ ] Dummy player: Similar to a draw pile, but simpler as the cards in the dummy player's hand are inaccessible.  A dummy player is just a player that is inactive to begin with.
+    - ~~[ ] Dummy player: Similar to a draw pile, but simpler as the cards in the dummy player's hand are inaccessible.  A dummy player is just a player that is inactive to begin with.~~
 - [ ] Review propagation algorithm to ensure it is as complete as possible
-- [ ] Options to increase difficulty:
+- [ ] Organize the following options into 4-6 difficulty levels:
     - [ ] Hide colors/symbols on opponents hands
     - [ ] Hide colors/symbols on all hands, including yours
     - [ ] Hide cards, only show table
