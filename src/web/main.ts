@@ -90,7 +90,7 @@ let selectedAskTarget: string | undefined;
 let syncingMaxThreeToggle = false;
 
 const STORAGE_KEY = "qgf-session-v1";
-const ENABLE_SESSION_RESTORE = false;
+const ENABLE_SESSION_RESTORE = true;
 const OKABE_ITO = ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"];
 
 function appendLog(message: string): void {
