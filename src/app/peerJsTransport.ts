@@ -51,6 +51,14 @@ function peerCtor(): PeerCtorLike {
   return ctor;
 }
 
+function safeCloseConnection(conn: DataConnectionLike): void {
+  try {
+    conn.close();
+  } catch {
+    // Best effort: invalid or already-closed connections should not crash teardown paths.
+  }
+}
+
 export class HostPeerJsTransport implements SessionTransport {
   private readonly peer: PeerLike;
   private readonly peers = new Map<PeerId, DataConnectionLike>();
@@ -63,53 +71,77 @@ export class HostPeerJsTransport implements SessionTransport {
     this.debugLogHandler(`[PeerJS host] ${line}`);
   }
 
+  private isCurrentConnection(peerId: PeerId, conn: DataConnectionLike): boolean {
+    return this.peers.get(peerId) === conn;
+  }
+
+  private rejectInvalidMessage(peerId: PeerId, conn: DataConnectionLike, error: unknown): void {
+    this.debug(`failed to parse message from ${peerId}: ${describePeerJsError(error)}.`);
+    if (this.isCurrentConnection(peerId, conn)) {
+      this.peerStateHandler(peerId, "error");
+    }
+    safeCloseConnection(conn);
+  }
+
   constructor(hostPeerId?: string) {
     const Peer = peerCtor();
     this.peer = new Peer(hostPeerId);
     this.peer.on("open", (id: string) => {
       this.debug(`local peer opened as ${id}.`);
       this.readyHandler(id);
-      this.peerStateHandler("self", "open");
     });
     this.peer.on("connection", (conn: DataConnectionLike) => {
       const peerId = conn.peer;
       this.debug(`incoming connection from ${peerId}.`);
+      const existing = this.peers.get(peerId);
       this.peers.set(peerId, conn);
+      if (existing && existing !== conn) {
+        this.debug(`replacing existing connection for ${peerId}.`);
+        safeCloseConnection(existing);
+      }
       this.peerStateHandler(peerId, "connecting");
       conn.on("open", () => {
+        if (!this.isCurrentConnection(peerId, conn)) {
+          return;
+        }
         this.debug(`connection ${peerId} opened.`);
         this.peerStateHandler(peerId, "open");
       });
       conn.on("close", () => {
+        if (!this.isCurrentConnection(peerId, conn)) {
+          return;
+        }
         this.debug(`connection ${peerId} closed.`);
         this.peers.delete(peerId);
         this.peerStateHandler(peerId, "closed");
       });
       conn.on("error", (error: unknown) => {
+        if (!this.isCurrentConnection(peerId, conn)) {
+          return;
+        }
         this.debug(`connection ${peerId} error: ${describePeerJsError(error)}.`);
         this.peerStateHandler(peerId, "error");
       });
       conn.on("data", (raw: unknown) => {
         try {
           const parsed = parseMessage(String(raw));
+          if (!this.isCurrentConnection(peerId, conn)) {
+            return;
+          }
           this.messageHandler(peerId, parsed);
         } catch (error) {
-          this.debug(`failed to parse message from ${peerId}: ${describePeerJsError(error)}.`);
-          throw error;
+          this.rejectInvalidMessage(peerId, conn, error);
         }
       });
     });
     this.peer.on("error", (error: unknown) => {
       this.debug(`peer error: ${describePeerJsError(error)}.`);
-      this.peerStateHandler("self", "error");
     });
     this.peer.on("disconnected", () => {
       this.debug("peer disconnected from signaling server.");
-      this.peerStateHandler("self", "closed");
     });
     this.peer.on("close", () => {
       this.debug("peer closed.");
-      this.peerStateHandler("self", "closed");
     });
   }
 
@@ -175,6 +207,14 @@ export class PeerPeerJsTransport implements SessionTransport {
     this.debugLogHandler(`[PeerJS peer] ${line}`);
   }
 
+  private rejectInvalidHostMessage(conn: DataConnectionLike, error: unknown): void {
+    this.debug(`failed to parse message from host: ${describePeerJsError(error)}.`);
+    if (this.conn === conn) {
+      this.peerStateHandler(this.hostLogicalPeerId, "error");
+    }
+    safeCloseConnection(conn);
+  }
+
   constructor(hostPeerId: PeerId, localPeerId?: string) {
     this.hostRemotePeerId = hostPeerId;
     const Peer = peerCtor();
@@ -186,42 +226,54 @@ export class PeerPeerJsTransport implements SessionTransport {
     });
     this.peer.on("error", (error: unknown) => {
       this.debug(`peer error: ${describePeerJsError(error)}.`);
-      this.peerStateHandler(this.hostLogicalPeerId, "error");
     });
     this.peer.on("disconnected", () => {
       this.debug("peer disconnected from signaling server.");
-      this.peerStateHandler(this.hostLogicalPeerId, "closed");
     });
     this.peer.on("close", () => {
       this.debug("peer closed.");
-      this.peerStateHandler(this.hostLogicalPeerId, "closed");
     });
   }
 
   private openHostConnection(): void {
     this.debug(`creating data connection to host ${this.hostRemotePeerId}.`);
+    if (this.conn) {
+      safeCloseConnection(this.conn);
+    }
     this.peerStateHandler(this.hostLogicalPeerId, "connecting");
     const conn = this.peer.connect(this.hostRemotePeerId, { reliable: true });
     this.conn = conn;
     conn.on("open", () => {
+      if (this.conn !== conn) {
+        return;
+      }
       this.debug(`connection to host ${this.hostRemotePeerId} opened.`);
       this.peerStateHandler(this.hostLogicalPeerId, "open");
     });
     conn.on("close", () => {
+      if (this.conn !== conn) {
+        return;
+      }
       this.debug(`connection to host ${this.hostRemotePeerId} closed.`);
+      this.conn = undefined;
       this.peerStateHandler(this.hostLogicalPeerId, "closed");
     });
     conn.on("error", (error: unknown) => {
+      if (this.conn !== conn) {
+        return;
+      }
       this.debug(`connection to host ${this.hostRemotePeerId} error: ${describePeerJsError(error)}.`);
       this.peerStateHandler(this.hostLogicalPeerId, "error");
     });
     conn.on("data", (raw: unknown) => {
       try {
         const parsed = parseMessage(String(raw));
+        if (this.conn !== conn) {
+          return;
+        }
         this.messageHandler(this.hostLogicalPeerId, parsed);
       } catch (error) {
-        this.debug(`failed to parse message from host: ${describePeerJsError(error)}.`);
-        throw error;
+        this.rejectInvalidHostMessage(conn, error);
       }
     });
   }
