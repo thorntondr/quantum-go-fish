@@ -17,7 +17,6 @@ export interface RenderCardsOptions {
   winnerPlayerId?: PlayerId;
 }
 
-const DEFAULT_SUIT_SYMBOLS = ["◼", "▲", "◆", "●", "⬟", "⬣", "★", "✚"];
 const UNKNOWN_LABEL = "Unknown";
 const UNKNOWN_COLOR = "#d6d9de";
 const UNKNOWN_SUIT_ID: SuitId = "__unknown__";
