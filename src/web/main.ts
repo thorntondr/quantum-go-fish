@@ -750,9 +750,9 @@ function scheduleHostRecoveryRetry(trigger: string): void {
     return;
   }
   hostRecoveryAttemptCount++;
-  if (hostRecoveryAttemptCount > 5) {
+  if (hostRecoveryAttemptCount > 7) {
     setSessionError("Unable to reconnect host room after multiple attempts. Please refresh the page.");
-    appendLog("Host recovery aborted after 5 attempts.");
+    appendLog("Host recovery aborted after 7 attempts.");
     hostRecoveryPending = false;
     return;
   }
