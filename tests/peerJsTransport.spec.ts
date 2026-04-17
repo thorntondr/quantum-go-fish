@@ -5,6 +5,7 @@ import { buildMessage } from "../src/app/sessionProtocol.js";
 import type { SessionMessage } from "../src/app/sessionTypes.js";
 
 type PeerStatus = "new" | "connecting" | "open" | "closed" | "error";
+type LocalPeerStatus = "open" | "closed" | "error";
 
 class FakeDataConnection {
   peer: string;
@@ -126,6 +127,22 @@ test("Host PeerJS transport drops malformed peer messages without throwing", () 
       ["peer-1:connecting", "peer-1:open", "peer-1:error", "peer-1:closed"]
     );
     assert.deepEqual(transport.listPeers(), []);
+  });
+});
+
+test("Host PeerJS transport reports local signaling lifecycle changes", () => {
+  withFakePeer(() => {
+    const transport = new HostPeerJsTransport("host-local");
+    const localStates: LocalPeerStatus[] = [];
+    transport.onLocalState((status) => localStates.push(status));
+
+    const peer = FakePeer.instances[0];
+    peer.emit("open", "host-local");
+    peer.emit("error", new Error("Lost connection to server."));
+    peer.emit("disconnected");
+    peer.emit("close");
+
+    assert.deepEqual(localStates, ["open", "error", "closed", "closed"]);
   });
 });
 

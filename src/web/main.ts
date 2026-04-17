@@ -1,6 +1,6 @@
 import { createHostSession, createPeerSession } from "../app/sessionController.js";
 import type { HostSession, PeerSession } from "../app/sessionController.js";
-import type { ConnectionState, RoomConfig, SessionRole, SuitMeta as SessionSuitMeta } from "../app/sessionTypes.js";
+import type { ConnectionState, SessionRole, SuitMeta as SessionSuitMeta } from "../app/sessionTypes.js";
 import { HostPeerJsTransport, PeerPeerJsTransport } from "../app/peerJsTransport.js";
 import { createInitialState } from "../engine/state.js";
 import { isLegalMove } from "../engine/rules.js";
@@ -88,10 +88,22 @@ let playerStatusById = new Map<string, string>();
 let currentRoomCode = "";
 let selectedAskTarget: string | undefined;
 let syncingMaxThreeToggle = false;
+let hostRecoveryPending = false;
+let hostRecoveryInFlight = false;
+let hostRecoveryReason = "";
 
 const STORAGE_KEY = "qgf-session-v1";
 const ENABLE_SESSION_RESTORE = true;
 const OKABE_ITO = ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"];
+
+interface SessionResumeData {
+  clientId?: string;
+  snapshot?: GameState;
+  sessionSeq?: number;
+  started?: boolean;
+  suitMeta?: Record<string, SuitMeta>;
+  seatClaims?: Array<{ clientId: string; playerId: string; expiresAt: number; label: string }>;
+}
 
 function appendLog(message: string): void {
   const line = `[${new Date().toLocaleTimeString()}] ${message}`;
@@ -115,6 +127,10 @@ function setMoveError(message: string): void {
 function clearErrors(): void {
   setSessionError("");
   setMoveError("");
+}
+
+function currentDisplayName(): string {
+  return friendlyNameInput?.value.trim() || "Player";
 }
 
 function setDepartureNotice(message: string): void {
@@ -664,6 +680,110 @@ function sessionHooks() {
   };
 }
 
+function captureHostResumeData(): SessionResumeData | undefined {
+  if (!hostSession) {
+    return undefined;
+  }
+  const snapshot = hostSession.getSnapshot();
+  return {
+    clientId: hostSession.getClientId(),
+    snapshot: snapshot.state,
+    sessionSeq: snapshot.sessionSeq,
+    started: gameStarted,
+    suitMeta: hostSession.getSuitMeta(),
+    seatClaims: hostSession.getSeatClaims()
+  };
+}
+
+function initializeHostTransport(hostCode: string, recovering = false): HostPeerJsTransport {
+  const transport = new HostPeerJsTransport(hostCode);
+  transport.onDebugLog?.(appendLog);
+  transport.onReady((id) => {
+    setWaitingRoomCode(id);
+    hostRecoveryPending = false;
+    hostRecoveryReason = "";
+    clearErrors();
+    appendLog(recovering ? `Host code restored: ${id}` : `Host code ready: ${id}`);
+  });
+  transport.onLocalState((status) => {
+    if (status === "open") {
+      hostRecoveryPending = false;
+      hostRecoveryReason = "";
+      clearErrors();
+      return;
+    }
+    if (hostRecoveryInFlight) {
+      return;
+    }
+    if (currentRole !== "host" || !hostSession) {
+      return;
+    }
+    if (!hostRecoveryPending) {
+      hostRecoveryReason = status;
+      appendLog(`Host signaling interrupted (${status}); room recovery is pending.`);
+    }
+    hostRecoveryPending = true;
+    if (document.visibilityState === "visible" && !hostRecoveryInFlight) {
+      void recoverHostSession(`transport_${status}`);
+    } else {
+      setSessionError("Hosting connection was interrupted. Return to the page to resume the room.");
+    }
+  });
+  return transport;
+}
+
+function restoreHostSession(hostCode: string, displayName: string, resume?: SessionResumeData, recovering = false): void {
+  hostTransport?.close();
+  hostTransport = initializeHostTransport(hostCode, recovering);
+  peerTransport = undefined;
+  peerSession = undefined;
+  hostSession = createHostSession(
+    { setup: buildConfig(MAX_PLAYERS) },
+    sessionHooks(),
+    {
+      transport: hostTransport,
+      displayName,
+      clientId: resume?.clientId,
+      initialState: resume?.snapshot,
+      sessionSeq: resume?.sessionSeq,
+      started: resume?.started,
+      suitMeta: resume?.suitMeta,
+      seatClaims: resume?.seatClaims
+    }
+  );
+  appendLog(recovering ? "Host session restored after signaling interruption." : "Host session initialized (PeerJS Cloud).");
+}
+
+async function recoverHostSession(trigger: string): Promise<void> {
+  if (hostRecoveryInFlight || !hostRecoveryPending || currentRole !== "host" || !hostSession) {
+    return;
+  }
+  const hostCode = currentRoomCode.trim();
+  const resume = captureHostResumeData();
+  if (!hostCode || !resume) {
+    return;
+  }
+  hostRecoveryInFlight = true;
+  hostRecoveryPending = false;
+  const reason = hostRecoveryReason || trigger;
+  setSessionError("Reconnecting host room...");
+  appendLog(`Attempting host recovery for ${hostCode} (${reason}).`);
+  try {
+    restoreHostSession(hostCode, currentDisplayName(), resume, true);
+    setScreen(gameStarted ? "game" : "waiting");
+    render();
+    persistSession();
+  } catch (error) {
+    hostRecoveryPending = true;
+    hostRecoveryReason = reason;
+    const message = error instanceof Error ? error.message : String(error);
+    setSessionError(`Hosting recovery failed: ${message}`);
+    appendLog(`Host recovery failed: ${message}`);
+  } finally {
+    hostRecoveryInFlight = false;
+  }
+}
+
 function closeSession(): void {
   hostSession?.close();
   peerSession?.close();
@@ -683,6 +803,9 @@ function closeSession(): void {
     waitingRoster.innerHTML = "<li class=\"roster-item\">No connected players yet.</li>";
   }
   currentRoomCode = "";
+  hostRecoveryPending = false;
+  hostRecoveryInFlight = false;
+  hostRecoveryReason = "";
   if (shareRoomLink) {
     shareRoomLink.value = "";
   }
@@ -762,14 +885,7 @@ async function initSession(options: {
   hostCode: string;
   localPeerId: string;
   displayName: string;
-  resume?: {
-    clientId?: string;
-    snapshot?: GameState;
-    sessionSeq?: number;
-    started?: boolean;
-    suitMeta?: Record<string, SuitMeta>;
-    seatClaims?: Array<{ clientId: string; playerId: string; expiresAt: number; label: string }>;
-  };
+  resume?: SessionResumeData;
 }): Promise<void> {
   clearErrors();
   closeSession();
@@ -787,30 +903,11 @@ async function initSession(options: {
     return;
   }
   const displayName = options.displayName.trim() || "Player";
-  const roomConfig: RoomConfig = {
-    setup: buildConfig(MAX_PLAYERS)
-  };
   state = createInitialState(buildConfig(1));
   render();
 
   if (options.role === "host") {
-    hostTransport = new HostPeerJsTransport(localPeerId);
-    hostTransport.onDebugLog?.(appendLog);
-    hostTransport.onReady((id) => {
-      setWaitingRoomCode(id);
-      appendLog(`Host code ready: ${id}`);
-    });
-    hostSession = createHostSession(roomConfig, sessionHooks(), {
-      transport: hostTransport,
-      displayName,
-      clientId: options.resume?.clientId,
-      initialState: options.resume?.snapshot,
-      sessionSeq: options.resume?.sessionSeq,
-      started: options.resume?.started,
-      suitMeta: options.resume?.suitMeta,
-      seatClaims: options.resume?.seatClaims
-    });
-    appendLog("Host session initialized (PeerJS Cloud).");
+    restoreHostSession(localPeerId, displayName, options.resume, false);
   } else {
     peerTransport = new PeerPeerJsTransport(hostCode, localPeerId);
     peerTransport.onDebugLog?.(appendLog);
@@ -1138,6 +1235,10 @@ window.addEventListener("beforeunload", () => {
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") {
     persistSession();
+    return;
+  }
+  if (document.visibilityState === "visible" && hostRecoveryPending && currentRole === "host") {
+    void recoverHostSession("visibility_resume");
   }
 });
 

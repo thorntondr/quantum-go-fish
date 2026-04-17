@@ -3,6 +3,7 @@ import type { SessionTransport } from "./sessionTransport.js";
 import { encodeMessage, parseMessage } from "./sessionProtocol.js";
 
 type PeerStatus = "new" | "connecting" | "open" | "closed" | "error";
+type LocalPeerStatus = "open" | "closed" | "error";
 
 interface DataConnectionLike {
   peer: string;
@@ -69,6 +70,7 @@ export class HostPeerJsTransport implements SessionTransport {
   private readonly peers = new Map<PeerId, DataConnectionLike>();
   private messageHandler: (from: PeerId, message: SessionMessage) => void = () => {};
   private peerStateHandler: (peerId: PeerId, status: PeerStatus) => void = () => {};
+  private localStateHandler: (status: LocalPeerStatus) => void = () => {};
   private readyHandler: (peerId: PeerId) => void = () => {};
   private debugLogHandler: (line: string) => void = () => {};
 
@@ -93,6 +95,7 @@ export class HostPeerJsTransport implements SessionTransport {
     this.peer = new Peer(hostPeerId);
     this.peer.on("open", (id: string) => {
       this.debug(`local peer opened as ${id}.`);
+      this.localStateHandler("open");
       this.readyHandler(id);
     });
     this.peer.on("connection", (conn: DataConnectionLike) => {
@@ -141,12 +144,15 @@ export class HostPeerJsTransport implements SessionTransport {
     });
     this.peer.on("error", (error: unknown) => {
       this.debug(`peer error: ${describePeerJsError(error)}.`);
+      this.localStateHandler("error");
     });
     this.peer.on("disconnected", () => {
       this.debug("peer disconnected from signaling server.");
+      this.localStateHandler("closed");
     });
     this.peer.on("close", () => {
       this.debug("peer closed.");
+      this.localStateHandler("closed");
     });
   }
 
@@ -182,6 +188,10 @@ export class HostPeerJsTransport implements SessionTransport {
 
   onPeerState(handler: (peerId: PeerId, status: PeerStatus) => void): void {
     this.peerStateHandler = handler;
+  }
+
+  onLocalState(handler: (status: LocalPeerStatus) => void): void {
+    this.localStateHandler = handler;
   }
 
   onDebugLog(handler: (line: string) => void): void {
