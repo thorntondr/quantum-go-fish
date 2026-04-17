@@ -91,6 +91,7 @@ let syncingMaxThreeToggle = false;
 let hostRecoveryPending = false;
 let hostRecoveryInFlight = false;
 let hostRecoveryReason = "";
+let hostRecoveryRetryTimer: number | undefined;
 
 const STORAGE_KEY = "qgf-session-v1";
 const ENABLE_SESSION_RESTORE = true;
@@ -707,6 +708,7 @@ function initializeHostTransport(hostCode: string, recovering = false): HostPeer
   });
   transport.onLocalState((status) => {
     if (status === "open") {
+      clearHostRecoveryRetryTimer();
       hostRecoveryPending = false;
       hostRecoveryReason = "";
       clearErrors();
@@ -723,13 +725,33 @@ function initializeHostTransport(hostCode: string, recovering = false): HostPeer
       appendLog(`Host signaling interrupted (${status}); room recovery is pending.`);
     }
     hostRecoveryPending = true;
-    if (document.visibilityState === "visible" && !hostRecoveryInFlight) {
-      void recoverHostSession(`transport_${status}`);
+    if (document.visibilityState === "visible") {
+      scheduleHostRecoveryRetry(status);
+      setSessionError("Reconnecting host room...");
     } else {
       setSessionError("Hosting connection was interrupted. Return to the page to resume the room.");
     }
   });
   return transport;
+}
+
+function clearHostRecoveryRetryTimer(): void {
+  if (hostRecoveryRetryTimer !== undefined) {
+    window.clearTimeout(hostRecoveryRetryTimer);
+    hostRecoveryRetryTimer = undefined;
+  }
+}
+
+function scheduleHostRecoveryRetry(trigger: string): void {
+  if (hostRecoveryRetryTimer !== undefined) {
+    return;
+  }
+  hostRecoveryRetryTimer = window.setTimeout(() => {
+    hostRecoveryRetryTimer = undefined;
+    if (hostRecoveryPending && currentRole === "host" && !hostRecoveryInFlight) {
+      void recoverHostSession(`retry_${trigger}`);
+    }
+  }, 1000);
 }
 
 function restoreHostSession(hostCode: string, displayName: string, resume?: SessionResumeData, recovering = false): void {
@@ -763,6 +785,7 @@ async function recoverHostSession(trigger: string): Promise<void> {
   if (!hostCode || !resume) {
     return;
   }
+  clearHostRecoveryRetryTimer();
   hostRecoveryInFlight = true;
   hostRecoveryPending = false;
   const reason = hostRecoveryReason || trigger;
@@ -806,6 +829,7 @@ function closeSession(): void {
   hostRecoveryPending = false;
   hostRecoveryInFlight = false;
   hostRecoveryReason = "";
+  clearHostRecoveryRetryTimer();
   if (shareRoomLink) {
     shareRoomLink.value = "";
   }
