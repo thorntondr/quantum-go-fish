@@ -59,6 +59,11 @@ function safeCloseConnection(conn: DataConnectionLike): void {
   }
 }
 
+function isPeerDialFailureForHost(error: unknown, hostPeerId: PeerId): boolean {
+  const message = describePeerJsError(error);
+  return message.includes(`Could not connect to peer ${hostPeerId}`);
+}
+
 export class HostPeerJsTransport implements SessionTransport {
   private readonly peer: PeerLike;
   private readonly peers = new Map<PeerId, DataConnectionLike>();
@@ -226,6 +231,10 @@ export class PeerPeerJsTransport implements SessionTransport {
     });
     this.peer.on("error", (error: unknown) => {
       this.debug(`peer error: ${describePeerJsError(error)}.`);
+      if (this.conn && !this.conn.open && isPeerDialFailureForHost(error, this.hostRemotePeerId)) {
+        this.peerStateHandler(this.hostLogicalPeerId, "error");
+        safeCloseConnection(this.conn);
+      }
     });
     this.peer.on("disconnected", () => {
       this.debug("peer disconnected from signaling server.");

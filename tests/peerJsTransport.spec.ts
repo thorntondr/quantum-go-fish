@@ -183,6 +183,27 @@ test("Peer PeerJS transport does not report local PeerJS client failures as host
   });
 });
 
+test("Peer PeerJS transport reports host dial failure when PeerJS cannot connect to the requested room", () => {
+  withFakePeer(() => {
+    const transport = new PeerPeerJsTransport("room-abc", "peer-local");
+    const states: Array<{ peerId: string; status: PeerStatus }> = [];
+    transport.onPeerState((peerId, status) => states.push({ peerId, status }));
+
+    const peer = FakePeer.instances[0];
+    const conn = new FakeDataConnection("room-abc");
+    peer.nextConnection = conn;
+
+    peer.emit("open", "peer-local");
+    peer.emit("error", new Error("Could not connect to peer room-abc."));
+
+    assert.equal(conn.closed, true);
+    assert.deepEqual(
+      states.map((entry) => `${entry.peerId}:${entry.status}`),
+      ["host:connecting", "host:error", "host:closed"]
+    );
+  });
+});
+
 test("Peer PeerJS transport closes the host connection after malformed data without throwing", () => {
   withFakePeer(() => {
     const transport = new PeerPeerJsTransport("room-abc", "peer-local");
