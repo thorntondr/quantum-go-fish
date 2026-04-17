@@ -92,6 +92,7 @@ let hostRecoveryPending = false;
 let hostRecoveryInFlight = false;
 let hostRecoveryReason = "";
 let hostRecoveryRetryTimer: number | undefined;
+let hostRecoveryAttemptCount = 0;
 
 const STORAGE_KEY = "qgf-session-v1";
 const ENABLE_SESSION_RESTORE = true;
@@ -703,6 +704,7 @@ function initializeHostTransport(hostCode: string, recovering = false): HostPeer
     setWaitingRoomCode(id);
     hostRecoveryPending = false;
     hostRecoveryReason = "";
+    hostRecoveryAttemptCount = 0;
     clearErrors();
     appendLog(recovering ? `Host code restored: ${id}` : `Host code ready: ${id}`);
   });
@@ -711,6 +713,7 @@ function initializeHostTransport(hostCode: string, recovering = false): HostPeer
       clearHostRecoveryRetryTimer();
       hostRecoveryPending = false;
       hostRecoveryReason = "";
+      hostRecoveryAttemptCount = 0;
       clearErrors();
       return;
     }
@@ -746,12 +749,20 @@ function scheduleHostRecoveryRetry(trigger: string): void {
   if (hostRecoveryRetryTimer !== undefined) {
     return;
   }
+  hostRecoveryAttemptCount++;
+  if (hostRecoveryAttemptCount > 5) {
+    setSessionError("Unable to reconnect host room after multiple attempts. Please refresh the page.");
+    appendLog("Host recovery aborted after 5 attempts.");
+    hostRecoveryPending = false;
+    return;
+  }
+  const delay = Math.min(1000 * Math.pow(2, hostRecoveryAttemptCount - 1), 30000); // Exponential backoff, max 30s
   hostRecoveryRetryTimer = window.setTimeout(() => {
     hostRecoveryRetryTimer = undefined;
     if (hostRecoveryPending && currentRole === "host" && !hostRecoveryInFlight) {
       void recoverHostSession(`retry_${trigger}`);
     }
-  }, 1000);
+  }, delay);
 }
 
 function restoreHostSession(hostCode: string, displayName: string, resume?: SessionResumeData, recovering = false): void {
@@ -829,6 +840,7 @@ function closeSession(): void {
   hostRecoveryPending = false;
   hostRecoveryInFlight = false;
   hostRecoveryReason = "";
+  hostRecoveryAttemptCount = 0;
   clearHostRecoveryRetryTimer();
   if (shareRoomLink) {
     shareRoomLink.value = "";
