@@ -93,6 +93,7 @@ let hostRecoveryInFlight = false;
 let hostRecoveryReason = "";
 let hostRecoveryRetryTimer: number | undefined;
 let hostRecoveryAttemptCount = 0;
+let sessionTeardownInProgress = false;
 
 const STORAGE_KEY = "qgf-session-v1";
 const ENABLE_SESSION_RESTORE = true;
@@ -108,6 +109,9 @@ interface SessionResumeData {
 }
 
 function appendLog(message: string): void {
+  if (sessionTeardownInProgress) {
+    return;
+  }
   const line = `[${new Date().toLocaleTimeString()}] ${message}`;
   const next = eventLogRoot.textContent ? `${eventLogRoot.textContent}\n${line}` : line;
   eventLogRoot.textContent = next;
@@ -280,6 +284,9 @@ function clearStoredSession(): void {
 }
 
 function persistSession(): void {
+  if (sessionTeardownInProgress) {
+    return;
+  }
   if (!ENABLE_SESSION_RESTORE) {
     return;
   }
@@ -635,30 +642,50 @@ function sessionHooks() {
   return {
     onLog: appendLog,
     onSessionError: (message: string) => {
+      if (sessionTeardownInProgress) {
+        return;
+      }
       setSessionError(message);
       if (currentRole === "peer" && !gameStarted) {
         closeSession();
       }
     },
     onMoveError: setMoveError,
-    onConnectionsChanged: renderRoster,
+    onConnectionsChanged: (connections: ConnectionState[]) => {
+      if (sessionTeardownInProgress) {
+        return;
+      }
+      renderRoster(connections);
+    },
     onSnapshot: (snapshot: { state: GameState }) => {
+      if (sessionTeardownInProgress) {
+        return;
+      }
       state = snapshot.state;
       render();
       persistSession();
     },
     onAssignedPlayer: (playerId: string | undefined) => {
+      if (sessionTeardownInProgress) {
+        return;
+      }
       assignedPlayer = playerId;
       appendLog(`Assigned local player: ${playerId ? formatPlayer(playerId) : "(none)"}`);
       render();
       persistSession();
     },
     onSuitMetaChanged: (suitMeta: Record<string, SuitMeta>) => {
+      if (sessionTeardownInProgress) {
+        return;
+      }
       updateSuitLabels(suitMeta);
       render();
       persistSession();
     },
     onSetupChanged: (setup: SetupConfig) => {
+      if (sessionTeardownInProgress) {
+        return;
+      }
       maxThreeEnabled = setup.initialSuitMax === 3;
       allOrNothingEnabled = setup.allOrNothing === true;
       drawPileEnabled = setup.drawPile === true;
@@ -666,6 +693,9 @@ function sessionHooks() {
       persistSession();
     },
     onGameStarted: (started: boolean) => {
+      if (sessionTeardownInProgress) {
+        return;
+      }
       gameStarted = started;
       appendLog(`Game started=${started}`);
       if (!started) {
@@ -819,6 +849,7 @@ async function recoverHostSession(trigger: string): Promise<void> {
 }
 
 function closeSession(): void {
+  sessionTeardownInProgress = true;
   const previousHostSession = hostSession;
   const previousPeerSession = peerSession;
   const previousHostTransport = hostTransport;
@@ -862,10 +893,14 @@ function closeSession(): void {
   setDepartureNotice("");
   setScreen("landing");
 
-  previousHostSession?.close();
-  previousPeerSession?.close();
-  previousHostTransport?.close();
-  previousPeerTransport?.close();
+  try {
+    previousHostSession?.close();
+    previousPeerSession?.close();
+    previousHostTransport?.close();
+    previousPeerTransport?.close();
+  } finally {
+    sessionTeardownInProgress = false;
+  }
 }
 
 function setScreen(target: "landing" | "waiting" | "game"): void {
