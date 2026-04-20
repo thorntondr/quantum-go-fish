@@ -819,10 +819,11 @@ async function recoverHostSession(trigger: string): Promise<void> {
 }
 
 function closeSession(): void {
-  hostSession?.close();
-  peerSession?.close();
-  hostTransport?.close();
-  peerTransport?.close();
+  const previousHostSession = hostSession;
+  const previousPeerSession = peerSession;
+  const previousHostTransport = hostTransport;
+  const previousPeerTransport = peerTransport;
+
   hostSession = undefined;
   peerSession = undefined;
   hostTransport = undefined;
@@ -860,6 +861,11 @@ function closeSession(): void {
   clearEventLog();
   setDepartureNotice("");
   setScreen("landing");
+
+  previousHostSession?.close();
+  previousPeerSession?.close();
+  previousHostTransport?.close();
+  previousPeerTransport?.close();
 }
 
 function setScreen(target: "landing" | "waiting" | "game"): void {
