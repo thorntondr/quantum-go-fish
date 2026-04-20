@@ -1269,6 +1269,9 @@ if (roomParam && roomCodeInput) {
   roomCodeInput.value = roomParam;
 }
 
+setScreen("landing");
+render();
+
 if (ENABLE_SESSION_RESTORE) {
   const RESUME_WINDOW_MS = 2 * 60 * 1000;
   const storedSession = loadStoredSession();
@@ -1318,6 +1321,3 @@ document.addEventListener("visibilitychange", () => {
     void recoverHostSession("visibility_resume");
   }
 });
-
-setScreen("landing");
-render();
