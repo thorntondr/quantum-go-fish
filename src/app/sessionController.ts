@@ -650,6 +650,7 @@ export function createHostSession(
   });
 
   hooks.onAssignedPlayer(hostPlayerId);
+  hooks.onSnapshot(snapshot);
   updateConnections();
   emitSuitMeta();
   hooks.onSetupChanged(config.setup);
