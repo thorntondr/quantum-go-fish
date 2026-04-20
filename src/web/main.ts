@@ -94,6 +94,14 @@ let hostRecoveryReason = "";
 let hostRecoveryRetryTimer: number | undefined;
 let hostRecoveryAttemptCount = 0;
 let sessionTeardownInProgress = false;
+let sessionBootstrap:
+  | {
+      role: SessionRole;
+      timeoutId: number;
+      resolve: () => void;
+      reject: (error: Error) => void;
+    }
+  | undefined;
 
 const STORAGE_KEY = "qgf-session-v1";
 const ENABLE_SESSION_RESTORE = true;
@@ -133,6 +141,32 @@ function setMoveError(message: string): void {
 function clearErrors(): void {
   setSessionError("");
   setMoveError("");
+}
+
+function clearSessionBootstrap(): void {
+  if (!sessionBootstrap) {
+    return;
+  }
+  window.clearTimeout(sessionBootstrap.timeoutId);
+  sessionBootstrap = undefined;
+}
+
+function resolveSessionBootstrap(role: SessionRole): void {
+  if (!sessionBootstrap || sessionBootstrap.role !== role) {
+    return;
+  }
+  const current = sessionBootstrap;
+  clearSessionBootstrap();
+  current.resolve();
+}
+
+function rejectSessionBootstrap(error: Error): void {
+  if (!sessionBootstrap) {
+    return;
+  }
+  const current = sessionBootstrap;
+  clearSessionBootstrap();
+  current.reject(error);
 }
 
 function currentDisplayName(): string {
@@ -645,6 +679,7 @@ function sessionHooks() {
       if (sessionTeardownInProgress) {
         return;
       }
+      rejectSessionBootstrap(new Error(message));
       setSessionError(message);
       if (currentRole === "peer" && !gameStarted) {
         closeSession();
@@ -670,6 +705,9 @@ function sessionHooks() {
         return;
       }
       assignedPlayer = playerId;
+      if (currentRole === "peer" && playerId) {
+        resolveSessionBootstrap("peer");
+      }
       appendLog(`Assigned local player: ${playerId ? formatPlayer(playerId) : "(none)"}`);
       render();
       persistSession();
@@ -736,6 +774,7 @@ function initializeHostTransport(hostCode: string, recovering = false): HostPeer
     hostRecoveryReason = "";
     hostRecoveryAttemptCount = 0;
     clearErrors();
+    resolveSessionBootstrap("host");
     appendLog(recovering ? `Host code restored: ${id}` : `Host code ready: ${id}`);
   });
   transport.onLocalState((status) => {
@@ -849,6 +888,7 @@ async function recoverHostSession(trigger: string): Promise<void> {
 }
 
 function closeSession(): void {
+  clearSessionBootstrap();
   sessionTeardownInProgress = true;
   const previousHostSession = hostSession;
   const previousPeerSession = peerSession;
@@ -964,6 +1004,7 @@ async function initSession(options: {
   displayName: string;
   resume?: SessionResumeData;
 }): Promise<void> {
+  clearSessionBootstrap();
   clearErrors();
   closeSession();
   clearEventLog();
@@ -983,24 +1024,38 @@ async function initSession(options: {
   state = createInitialState(buildConfig(1));
   render();
 
-  if (options.role === "host") {
-    restoreHostSession(localPeerId, displayName, options.resume, false);
-  } else {
-    peerTransport = new PeerPeerJsTransport(hostCode, localPeerId);
-    peerTransport.onDebugLog?.(appendLog);
-    peerTransport.onReady((id) => {
-      appendLog(`Peer ID ready: ${id}`);
-    });
-    peerSession = createPeerSession(sessionHooks(), {
-      transport: peerTransport,
-      displayName,
-      clientId: options.resume?.clientId
-    });
-    appendLog(`Peer session initialized; connecting to host code ${hostCode}.`);
-  }
-  setWaitingRoomCode(hostCode);
-  setScreen(gameStarted ? "game" : "waiting");
-  render();
+  await new Promise<void>((resolve, reject) => {
+    sessionBootstrap = {
+      role: options.role,
+      timeoutId: window.setTimeout(() => {
+        rejectSessionBootstrap(new Error(`Timed out while starting ${options.role === "host" ? "host room" : "peer session"}.`));
+      }, 10000),
+      resolve,
+      reject
+    };
+    try {
+      if (options.role === "host") {
+        restoreHostSession(localPeerId, displayName, options.resume, false);
+      } else {
+        peerTransport = new PeerPeerJsTransport(hostCode, localPeerId);
+        peerTransport.onDebugLog?.(appendLog);
+        peerTransport.onReady((id) => {
+          appendLog(`Peer ID ready: ${id}`);
+        });
+        peerSession = createPeerSession(sessionHooks(), {
+          transport: peerTransport,
+          displayName,
+          clientId: options.resume?.clientId
+        });
+        appendLog(`Peer session initialized; connecting to host code ${hostCode}.`);
+      }
+      setWaitingRoomCode(hostCode);
+      setScreen(gameStarted ? "game" : "waiting");
+      render();
+    } catch (error) {
+      rejectSessionBootstrap(error instanceof Error ? error : new Error(String(error)));
+    }
+  });
 }
 
 function submitMove(move: Move): void {
@@ -1284,27 +1339,41 @@ if (ENABLE_SESSION_RESTORE) {
       if (roomCodeInput && role === "peer") {
         roomCodeInput.value = hostCode;
       }
-      void initSession({
-        role,
-        hostCode,
-        localPeerId: role === "host" ? hostCode : randomPeerId(),
-        displayName,
-        resume: {
-          clientId: typeof storedSession.clientId === "string" ? storedSession.clientId : undefined,
-          snapshot: storedSession.snapshot as GameState | undefined,
-          sessionSeq: typeof storedSession.sessionSeq === "number" ? storedSession.sessionSeq : undefined,
-          started: Boolean(storedSession.started),
-          suitMeta: storedSession.suitMeta as Record<string, SuitMeta> | undefined,
-          seatClaims: storedSession.seatClaims as Array<{
-            clientId: string;
-            playerId: string;
-            expiresAt: number;
-            label: string;
-          }> | undefined
+      const resume: SessionResumeData = {
+        clientId: typeof storedSession.clientId === "string" ? storedSession.clientId : undefined,
+        snapshot: storedSession.snapshot as GameState | undefined,
+        sessionSeq: typeof storedSession.sessionSeq === "number" ? storedSession.sessionSeq : undefined,
+        started: Boolean(storedSession.started),
+        suitMeta: storedSession.suitMeta as Record<string, SuitMeta> | undefined,
+        seatClaims: storedSession.seatClaims as Array<{
+          clientId: string;
+          playerId: string;
+          expiresAt: number;
+          label: string;
+        }> | undefined
+      };
+      void (async () => {
+        let lastError: Error | undefined;
+        for (let attempt = 1; attempt <= 4; attempt += 1) {
+          try {
+            await initSession({
+              role,
+              hostCode,
+              localPeerId: role === "host" ? hostCode : randomPeerId(),
+              displayName,
+              resume
+            });
+            return;
+          } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+            appendLog(`Stored session restore attempt ${attempt} failed: ${lastError.message}`);
+            if (attempt < 4) {
+              await new Promise((resolve) => window.setTimeout(resolve, 1000 * attempt));
+            }
+          }
         }
-      }).catch((error) => {
-        setSessionError(error instanceof Error ? error.message : String(error));
-      });
+        setSessionError(lastError?.message ?? "Unable to restore previous session.");
+      })();
     }
   }
 }
