@@ -999,7 +999,7 @@ async function initSession(options: {
     appendLog(`Peer session initialized; connecting to host code ${hostCode}.`);
   }
   setWaitingRoomCode(hostCode);
-  setScreen("waiting");
+  setScreen(gameStarted ? "game" : "waiting");
   render();
 }
 
