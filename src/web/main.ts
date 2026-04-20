@@ -104,6 +104,7 @@ let sessionBootstrap:
   | undefined;
 
 const STORAGE_KEY = "qgf-session-v1";
+const RESTORE_ERROR_KEY = "qgf-session-restore-error";
 const ENABLE_SESSION_RESTORE = true;
 const OKABE_ITO = ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000"];
 
@@ -141,6 +142,28 @@ function setMoveError(message: string): void {
 function clearErrors(): void {
   setSessionError("");
   setMoveError("");
+}
+
+function loadRestoreError(): string {
+  if (typeof sessionStorage === "undefined") {
+    return "";
+  }
+  const message = sessionStorage.getItem(RESTORE_ERROR_KEY) ?? "";
+  if (message) {
+    sessionStorage.removeItem(RESTORE_ERROR_KEY);
+  }
+  return message;
+}
+
+function saveRestoreError(message: string): void {
+  if (typeof sessionStorage === "undefined") {
+    return;
+  }
+  if (message) {
+    sessionStorage.setItem(RESTORE_ERROR_KEY, message);
+  } else {
+    sessionStorage.removeItem(RESTORE_ERROR_KEY);
+  }
 }
 
 function clearSessionBootstrap(): void {
@@ -1326,6 +1349,10 @@ if (roomParam && roomCodeInput) {
 
 setScreen("landing");
 render();
+const restoreError = loadRestoreError();
+if (restoreError) {
+  setSessionError(restoreError);
+}
 
 if (ENABLE_SESSION_RESTORE) {
   const RESUME_WINDOW_MS = 2 * 60 * 1000;
@@ -1356,6 +1383,7 @@ if (ENABLE_SESSION_RESTORE) {
         let lastError: Error | undefined;
         for (let attempt = 1; attempt <= 4; attempt += 1) {
           try {
+            saveRestoreError("");
             await initSession({
               role,
               hostCode,
@@ -1367,11 +1395,13 @@ if (ENABLE_SESSION_RESTORE) {
           } catch (error) {
             lastError = error instanceof Error ? error : new Error(String(error));
             appendLog(`Stored session restore attempt ${attempt} failed: ${lastError.message}`);
+            saveRestoreError(`Restore attempt ${attempt} failed: ${lastError.message}`);
             if (attempt < 4) {
               await new Promise((resolve) => window.setTimeout(resolve, 1000 * attempt));
             }
           }
         }
+        saveRestoreError(lastError?.message ?? "Unable to restore previous session.");
         setSessionError(lastError?.message ?? "Unable to restore previous session.");
       })();
     }
