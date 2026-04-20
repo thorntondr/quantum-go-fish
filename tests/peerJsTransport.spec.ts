@@ -85,19 +85,28 @@ class FakePeer {
   }
 }
 
-function withFakePeer(testBody: () => void): void {
+function withFakePeer<T>(testBody: () => T | Promise<T>): T | Promise<T> {
   const originalPeer = (globalThis as { Peer?: typeof FakePeer }).Peer;
   FakePeer.instances.length = 0;
   (globalThis as { Peer?: typeof FakePeer }).Peer = FakePeer;
-  try {
-    testBody();
-  } finally {
+  const cleanup = () => {
     if (originalPeer) {
       (globalThis as { Peer?: typeof FakePeer }).Peer = originalPeer;
     } else {
       delete (globalThis as { Peer?: typeof FakePeer }).Peer;
     }
     FakePeer.instances.length = 0;
+  };
+  try {
+    const result = testBody();
+    if (result && typeof (result as Promise<T>).then === "function") {
+      return (result as Promise<T>).finally(cleanup);
+    }
+    cleanup();
+    return result;
+  } catch (error) {
+    cleanup();
+    throw error;
   }
 }
 
@@ -243,6 +252,36 @@ test("Peer PeerJS transport closes the host connection after malformed data with
     assert.deepEqual(
       states.map((entry) => `${entry.peerId}:${entry.status}`),
       ["host:connecting", "host:open", "host:error", "host:closed"]
+    );
+  });
+});
+
+test("Peer PeerJS transport retries the host connection after it closes", async () => {
+  await withFakePeer(async () => {
+    const transport = new PeerPeerJsTransport("room-abc", "peer-local");
+    const states: Array<{ peerId: string; status: PeerStatus }> = [];
+    transport.onPeerState((peerId, status) => states.push({ peerId, status }));
+
+    const peer = FakePeer.instances[0];
+    const conn1 = new FakeDataConnection("room-abc");
+    peer.nextConnection = conn1;
+
+    peer.emit("open", "peer-local");
+    conn1.open = true;
+    conn1.emit("open");
+    conn1.close();
+
+    const conn2 = new FakeDataConnection("room-abc");
+    peer.nextConnection = conn2;
+
+    await new Promise((resolve) => setTimeout(resolve, 550));
+
+    conn2.open = true;
+    conn2.emit("open");
+
+    assert.deepEqual(
+      states.map((entry) => `${entry.peerId}:${entry.status}`),
+      ["host:connecting", "host:open", "host:closed", "host:connecting", "host:open"]
     );
   });
 });

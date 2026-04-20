@@ -213,6 +213,9 @@ export class PeerPeerJsTransport implements SessionTransport {
   private readonly hostRemotePeerId: PeerId;
   private readonly hostLogicalPeerId: PeerId = "host";
   private conn: DataConnectionLike | undefined;
+  private reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  private reconnectAttemptCount = 0;
+  private closed = false;
   private messageHandler: (from: PeerId, message: SessionMessage) => void = () => {};
   private peerStateHandler: (peerId: PeerId, status: PeerStatus) => void = () => {};
   private readyHandler: (peerId: PeerId) => void = () => {};
@@ -228,6 +231,30 @@ export class PeerPeerJsTransport implements SessionTransport {
       this.peerStateHandler(this.hostLogicalPeerId, "error");
     }
     safeCloseConnection(conn);
+  }
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer === undefined) {
+      return;
+    }
+    clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = undefined;
+  }
+
+  private scheduleReconnect(reason: string): void {
+    if (this.closed || this.reconnectTimer !== undefined) {
+      return;
+    }
+    const delayMs = Math.min(500 * Math.pow(2, this.reconnectAttemptCount), 4000);
+    this.reconnectAttemptCount += 1;
+    this.debug(`scheduling reconnect to host ${this.hostRemotePeerId} in ${delayMs}ms (${reason}).`);
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = undefined;
+      if (this.closed || this.conn) {
+        return;
+      }
+      this.openHostConnection();
+    }, delayMs);
   }
 
   constructor(hostPeerId: PeerId, localPeerId?: string) {
@@ -255,6 +282,7 @@ export class PeerPeerJsTransport implements SessionTransport {
   }
 
   private openHostConnection(): void {
+    this.clearReconnectTimer();
     this.debug(`creating data connection to host ${this.hostRemotePeerId}.`);
     if (this.conn) {
       safeCloseConnection(this.conn);
@@ -266,6 +294,7 @@ export class PeerPeerJsTransport implements SessionTransport {
       if (this.conn !== conn) {
         return;
       }
+      this.reconnectAttemptCount = 0;
       this.debug(`connection to host ${this.hostRemotePeerId} opened.`);
       this.peerStateHandler(this.hostLogicalPeerId, "open");
     });
@@ -276,6 +305,7 @@ export class PeerPeerJsTransport implements SessionTransport {
       this.debug(`connection to host ${this.hostRemotePeerId} closed.`);
       this.conn = undefined;
       this.peerStateHandler(this.hostLogicalPeerId, "closed");
+      this.scheduleReconnect("connection_closed");
     });
     conn.on("error", (error: unknown) => {
       if (this.conn !== conn) {
@@ -283,6 +313,7 @@ export class PeerPeerJsTransport implements SessionTransport {
       }
       this.debug(`connection to host ${this.hostRemotePeerId} error: ${describePeerJsError(error)}.`);
       this.peerStateHandler(this.hostLogicalPeerId, "error");
+      this.scheduleReconnect("connection_error");
     });
     conn.on("data", (raw: unknown) => {
       try {
@@ -332,6 +363,8 @@ export class PeerPeerJsTransport implements SessionTransport {
   }
 
   close(): void {
+    this.closed = true;
+    this.clearReconnectTimer();
     this.conn?.close();
     this.peer.disconnect();
     this.peer.destroy();
