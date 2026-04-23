@@ -648,7 +648,8 @@ function renderRoster(connections: ConnectionState[]): void {
       const item = document.createElement("li");
       item.className = "roster-item";
       const label = player.playerId ? formatPlayer(player.playerId) : (player.label || player.peerId);
-      item.textContent = `${label} (${player.status})`;
+      const isCurrentPlayer = player.playerId === assignedPlayer;
+      item.textContent = `${label} (${player.status})${isCurrentPlayer ? " (You)" : ""}`;
       waitingRoster.appendChild(item);
     }
   }
