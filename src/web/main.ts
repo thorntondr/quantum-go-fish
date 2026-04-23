@@ -1138,23 +1138,34 @@ if (hostBtn && friendlyNameInput) {
   });
 }
 
+function joinRoom() {
+  const hostCode = roomCodeInput!.value.trim();
+  if (!hostCode) {
+    setSessionError("Room code is required to join.");
+    return;
+  }
+  const name = friendlyNameInput!.value.trim() || "Player";
+  clearErrors();
+  void initSession({
+    role: "peer",
+    hostCode,
+    localPeerId: randomPeerId(),
+    displayName: name
+  }).catch((error) => {
+    setSessionError(error instanceof Error ? error.message : String(error));
+  });
+}
+
 if (joinBtn && friendlyNameInput && roomCodeInput) {
-  joinBtn.addEventListener("click", () => {
-    const hostCode = roomCodeInput.value.trim();
-    if (!hostCode) {
-      setSessionError("Room code is required to join.");
-      return;
+  joinBtn.addEventListener("click", joinRoom);
+}
+
+if (roomCodeInput) {
+  roomCodeInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      joinRoom();
     }
-    const name = friendlyNameInput.value.trim() || "Player";
-    clearErrors();
-    void initSession({
-      role: "peer",
-      hostCode,
-      localPeerId: randomPeerId(),
-      displayName: name
-    }).catch((error) => {
-      setSessionError(error instanceof Error ? error.message : String(error));
-    });
   });
 }
 
